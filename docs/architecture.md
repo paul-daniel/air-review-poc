@@ -45,7 +45,7 @@ Deterministic decision (`routing.light` / `routing.heavy` thresholds):
 
 1. nothing reviewable → light, no model call at all;
 2. no source code changed (translation, data, docs or config only) → **light**;
-3. any heavy threshold hit (files ≥ 10, lines ≥ 400, modules ≥ 3) → **heavy**;
+3. any heavy threshold hit (files ≥ 10, lines ≥ 400, or modules ≥ 3 with more than 150 changed lines) → **heavy**;
 4. within the light limits (≤ 3 files, ≤ 150 lines, one module) → **light**;
 5. otherwise **standard**, flagged _ambiguous_.
 

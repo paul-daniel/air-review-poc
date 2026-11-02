@@ -81,7 +81,7 @@ routing:
   heavy:
     minFiles: 10 # any of these → heavy
     minLines: 400
-    minModules: 3
+    minModules: 3 # only counts when the change exceeds light.maxLines
 ```
 
 Counts are taken over the reviewed delta (files not excluded by

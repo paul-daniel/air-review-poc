@@ -103,8 +103,11 @@ export function triageDeterministically(
   const heavyHits = [
     signals.files >= routing.heavy.minFiles && `${signals.files} files ≥ ${routing.heavy.minFiles}`,
     lines >= routing.heavy.minLines && `${lines} changed lines ≥ ${routing.heavy.minLines}`,
+    // Touching several modules is a heavy signal only when the change itself is
+    // not small: a 60-line helper shared by three workspaces is not a heavy review.
     signals.modules.length >= routing.heavy.minModules &&
-      `${signals.modules.length} modules touched ≥ ${routing.heavy.minModules} (${signals.modules.join(", ")})`,
+      lines > routing.light.maxLines &&
+      `${signals.modules.length} modules touched ≥ ${routing.heavy.minModules} (${signals.modules.join(", ")}) with ${lines} changed lines`,
   ].filter((hit): hit is string => Boolean(hit));
   if (heavyHits.length > 0) {
     reasons.push(...heavyHits);

@@ -84,11 +84,15 @@ describe("deterministic triage", () => {
     expect(result.reasons.join(" ")).toMatch(/API surface touched: libs\/shared\/src\/returns\/index.ts/);
   });
 
-  it("three modules alone are enough for the heavy tier", () => {
-    const signals = measureComplexity(
+  it("three modules make a change heavy only when it is not small", () => {
+    const small = measureComplexity(
       delta([file("apps/web/a.ts", 5), file("apps/api/b.ts", 5), file("libs/shared/c.ts", 5)]),
     );
-    expect(triageDeterministically(signals, routing).tier).toBe("heavy");
+    expect(triageDeterministically(small, routing).tier).toBe("standard");
+    const sized = measureComplexity(
+      delta([file("apps/web/a.ts", 80), file("apps/api/b.ts", 60), file("libs/shared/c.ts", 20)]),
+    );
+    expect(triageDeterministically(sized, routing).tier).toBe("heavy");
   });
 
   it("leaves the middle band ambiguous for the triage model", () => {
