@@ -8,6 +8,9 @@ export interface TelemetryRow {
   pullRequest: number | null;
   skipped: boolean;
   gatePassed: boolean;
+  verdict?: string;
+  /** Complexity tier and reviewer model chosen by the triage step. */
+  routing?: { tier: string; reviewerModel: string; method: string };
   open: number;
   resolved: number;
   inputTokens: number;
@@ -34,6 +37,8 @@ export function readTelemetry(logPath: string, last = 10): TelemetryRow[] {
         skipped?: boolean;
         incomplete?: boolean;
         gatePassed?: boolean;
+        verdict?: string;
+        routing?: { tier: string; reviewerModel: string; method: string };
         findings?: { open?: number; resolved?: number };
         usage?: {
           inputTokens?: number;
@@ -51,6 +56,8 @@ export function readTelemetry(logPath: string, last = 10): TelemetryRow[] {
         pullRequest: record.pullRequest ?? null,
         skipped: Boolean(record.skipped),
         gatePassed: record.gatePassed !== false,
+        verdict: record.verdict,
+        routing: record.routing,
         open: record.findings?.open ?? 0,
         resolved: record.findings?.resolved ?? 0,
         inputTokens: record.usage?.inputTokens ?? 0,
@@ -85,6 +92,7 @@ export function runTelemetry(logPath: string, options: { last: number; json: boo
       "when",
       "repository",
       "pr",
+      "tier",
       "findings",
       "tokens",
       "cached",
@@ -98,6 +106,7 @@ export function runTelemetry(logPath: string, options: { last: number; json: boo
       row.timestamp.slice(0, 19).replace("T", " "),
       row.repository,
       row.pullRequest ?? "-",
+      row.routing ? `${row.routing.tier} (${row.routing.reviewerModel})` : "-",
       `${row.open} open / ${row.resolved} fixed`,
       `${formatTokens(row.inputTokens)}↓/${formatTokens(row.outputTokens)}↑`,
       row.cachedInputTokens ?? "n/a",

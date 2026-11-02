@@ -1,0 +1,75 @@
+# Azure Pipelines: air-review as a pull-request reviewer (build validation).
+#
+# Attach this pipeline to the target branch as a *build validation* policy
+# (Project settings → Repositories → Policies → Branch policies). Exit code 10
+# (blocking findings) fails the validation; 20/30/40/50 are tool or
+# infrastructure errors and fail the build too, with the reason in the log.
+#
+# Variable group `air-review` (Pipelines → Library):
+#   AIR_REVIEW_PROVIDER              azure-foundry
+#   AIR_REVIEW_BASE_URL              https://<resource>.services.ai.azure.com
+#   AIR_REVIEW_MODEL_TRIAGE          <cheap deployment>
+#   AIR_REVIEW_MODEL_REVIEWER        <standard deployment>
+#   AIR_REVIEW_MODEL_VERIFIER        <cheap deployment>
+#   AIR_REVIEW_MODEL_REVIEWER_LIGHT  <cheap deployment>
+#   AIR_REVIEW_MODEL_REVIEWER_HEAVY  <strong deployment>
+#   AIR_REVIEW_PRICING               {"<deployment>":{"input":..,"cachedInput":..,"output":..}}
+#   AIR_REVIEW_API_KEY  (secret)     Foundry API key  — or use the AzureCLI step below for Entra ID
+
+trigger: none # run from the branch policy, not on push
+pr:
+  branches:
+    include: [main]
+
+pool:
+  vmImage: ubuntu-latest # or `name: Default` for a self-hosted agent
+
+variables:
+  - group: air-review
+
+steps:
+  - checkout: self
+    fetchDepth: 0 # full history: the diff is computed locally from the merge base
+    persistCredentials: true
+
+  - task: NodeTool@0
+    inputs:
+      versionSpec: "22.x"
+    displayName: Use Node 22
+
+  # Option 1: install from the GitHub repository (no npm registry publication needed).
+  - script: npm install -g github:paul-daniel/air-review-poc
+    displayName: Install air-review
+
+  # Option 2: build from a second repository checked out in the job (see docs/azure-devops.md).
+  # - checkout: git://air-review-test/air-review-poc@main
+  # - script: cd $(Build.SourcesDirectory)/air-review-poc && npm ci && npm run build && npm link
+
+  # Optional, keyless Foundry access with a service connection (Entra ID).
+  # The identity needs the inference role on the Foundry resource.
+  # - task: AzureCLI@2
+  #   displayName: Get a Foundry token
+  #   inputs:
+  #     azureSubscription: <service connection>
+  #     scriptType: bash
+  #     scriptLocation: inlineScript
+  #     inlineScript: |
+  #       token=$(az account get-access-token --scope https://ai.azure.com/.default --query accessToken -o tsv)
+  #       echo "##vso[task.setvariable variable=AIR_REVIEW_ACCESS_TOKEN;issecret=true]$token"
+
+  - script: air-review doctor --plain
+    displayName: Check configuration and deployments
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      AIR_REVIEW_API_KEY: $(AIR_REVIEW_API_KEY)
+
+  - script: air-review review --publish --plain
+    displayName: Air Review
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken) # the job token is not exported by default
+      AIR_REVIEW_API_KEY: $(AIR_REVIEW_API_KEY) # secret variables are never exported to scripts either
+
+  - publish: $(Build.SourcesDirectory)/.air-review/reports
+    artifact: air-review-reports
+    condition: succeededOrFailed()
+    displayName: Keep the run report (cost per step, workflow diagram)

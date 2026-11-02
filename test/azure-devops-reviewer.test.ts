@@ -93,10 +93,12 @@ function adapter(
   const { calls, fetchImpl } = fakeFetch((request) => {
     if (request.method === "GET" && request.url.endsWith("/pullRequests/7?api-version=7.1")) return PR;
     if (request.method === "GET" && request.url.includes("/threads?")) return { value: threads };
-    if (request.method === "GET" && request.url.includes("connectionData"))
+    if (request.method === "GET" && request.url.includes("connectionData")) {
       return { authenticatedUser: { id: "me-guid" } };
-    if (request.method === "POST" && request.url.includes("/threads?"))
+    }
+    if (request.method === "POST" && request.url.includes("/threads?")) {
       return { id: 900, comments: [{ id: 1 }] };
+    }
     return {};
   });
   const scm = new AzureDevOpsAdapter({
