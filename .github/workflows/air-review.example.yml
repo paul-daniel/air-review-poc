@@ -1,0 +1,39 @@
+# Example workflow. Copy to .github/workflows/air-review.yml.
+# It publishes with the built-in github.token; no personal token needed.
+#
+# The model backend is whatever air-review.yaml configures. Point it at a
+# hosted OpenAI-compatible endpoint (baseUrl + apiKeyEnv) so the job does not
+# install Ollama or download models. See docs/github-ci.md.
+name: air-review
+
+on:
+  pull_request:
+
+jobs:
+  air-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install air-review
+        run: npm install -g air-review
+
+      - name: Review
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # Provider is optional when air-review.yaml sets it; env wins.
+          # AIR_REVIEW_PROVIDER: azure-openai
+          # AIR_REVIEW_BASE_URL: ${{ vars.AIR_REVIEW_BASE_URL }}
+          # AIR_REVIEW_API_KEY: ${{ secrets.AIR_REVIEW_API_KEY }}
+          # AIR_REVIEW_MODEL_REVIEWER: ${{ vars.AIR_REVIEW_MODEL_REVIEWER }}
+        run: air-review review --publish

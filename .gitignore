@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.air-review/
+coverage/
+*.log
+.DS_Store
+test/fixtures/work/
+
+# Local environment files; the documented template stays tracked.
+.env
+.env.*
+!.env.example
+
+# VitePress documentation site (website/)
+website/.vitepress/dist
+website/.vitepress/cache

@@ -1,0 +1,68 @@
+# Example configuration for a GitHub project behind an OpenAI-compatible
+# endpoint. Copy to your repository root as air-review.yaml and adjust the
+# endpoint and model names.
+
+version: 1
+
+frameworks:
+  - angular
+
+provider: openai
+
+models:
+  default: gpt-4o-mini
+  roles:
+    planner: gpt-4o-mini
+    reviewer: gpt-4.1
+    verifier: gpt-4o-mini
+
+endpoint:
+  # Preset defaults cover the vendor; override when your endpoint differs.
+  # Other presets: azure-openai, azure-foundry, bedrock, google, anthropic,
+  # mistral, groq, openrouter, together, fireworks, openai-compatible.
+  baseUrl: https://api.openai.com/v1
+  apiKeyEnv: OPENAI_API_KEY
+  timeoutMs: 120000
+
+context:
+  strategy: structural-selective
+  maxContextRequests: 20
+  maxEvidenceTokens: 30000
+
+review:
+  severities:
+    publish: [BLOCKER, CRITICAL, MAJOR, MINOR]
+  gate:
+    severities: [BLOCKER, CRITICAL]
+    minimumConfidence: 0.9
+  maxFindings: 40
+
+memory:
+  backend: pr-ledger
+
+cache:
+  enabled: true
+  dir: .air-review/cache
+
+privacy:
+  redactSecrets: true
+  sendFullFiles: false
+
+platform:
+  provider: github
+  publish: false
+  github:
+    tokenEnv: GITHUB_TOKEN
+  local:
+    base: origin/main
+
+telemetry:
+  enabled: true
+  log: .air-review/telemetry.jsonl
+  pricing:
+    gpt-4.1:
+      input: 2
+      output: 8
+    gpt-4o-mini:
+      input: 0.15
+      output: 0.6

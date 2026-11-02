@@ -1,0 +1,119 @@
+import type { AirReviewConfig } from "../config/schema.js";
+import { ConfigError } from "../errors.js";
+import { PROVIDER_PRESETS, PRESET_IDS, type ProviderPreset } from "./presets.js";
+
+export interface ResolvedEndpoint {
+  api: "auto" | "chat-completions" | "responses";
+  temperature?: number | null;
+  maxTokensParameter: "max_tokens" | "max_completion_tokens";
+  providerId: string;
+  preset: ProviderPreset;
+  baseUrl: string;
+  apiKey?: string;
+  apiKeyEnv?: string;
+  apiKeyHeader: string;
+  apiKeyPrefix: string;
+  chatPath: string;
+  modelsPath: string;
+  listModels: boolean;
+  timeoutMs: number;
+  headers: Record<string, string>;
+}
+
+function pick<T>(...values: Array<T | undefined>): T | undefined {
+  return values.find((value) => value !== undefined);
+}
+
+/**
+ * Users paste endpoints straight from the Azure portal. Accept every documented
+ * Microsoft Foundry shape and make it an OpenAI v1 base URL:
+ *   https://<res>.openai.azure.com                    -> .../openai/v1
+ *   https://<res>.services.ai.azure.com               -> .../openai/v1
+ *   https://<res>.services.ai.azure.com/api/projects/<p> -> .../api/projects/<p>/openai/v1
+ *   https://<res>.cognitiveservices.azure.com         -> .../openai/v1
+ * A URL that already ends in /openai/v1 is returned unchanged. Other providers
+ * are only stripped of trailing slashes.
+ */
+export function normalizeBaseUrl(baseUrl: string, providerId: string): string {
+  let trimmed = baseUrl.replace(/\/+$/, "");
+  if (!providerId.startsWith("azure-")) return trimmed;
+  // The New Foundry portal prints "https://<res>.services.ai.azure.com/api/projects/" for a
+  // resource that has no project yet: that is the resource endpoint, not a project one.
+  trimmed = trimmed.replace(/\/api\/projects$/i, "");
+  if (/\/openai\/v1$/i.test(trimmed)) return trimmed;
+  if (/\/openai$/i.test(trimmed)) return `${trimmed}/v1`;
+  if (
+    /^https:\/\/[^/]+\.(openai\.azure\.com|services\.ai\.azure\.com|cognitiveservices\.azure\.com)(\/api\/projects\/[^/?#]+)?$/i.test(
+      trimmed,
+    )
+  ) {
+    return `${trimmed}/openai/v1`;
+  }
+  return trimmed;
+}
+
+/**
+ * Merge preset defaults with the `endpoint` section and the legacy `openai`
+ * section (kept for configs written before the preset system).
+ */
+export function resolveEndpoint(config: AirReviewConfig): ResolvedEndpoint {
+  const preset = PROVIDER_PRESETS[config.provider];
+  if (!preset) {
+    throw new ConfigError(
+      `Unknown provider "${config.provider}". Available providers: ${PRESET_IDS.join(", ")}.`,
+    );
+  }
+
+  const legacy = config.openai;
+  const endpoint = config.endpoint;
+
+  const apiKeyEnv = pick(endpoint.apiKeyEnv, legacy.apiKeyEnv, preset.apiKeyEnv);
+  const apiKey = pick(endpoint.apiKey, legacy.apiKey, apiKeyEnv ? process.env[apiKeyEnv] : undefined);
+  const baseUrl = pick(endpoint.baseUrl, legacy.baseUrl, preset.baseUrl);
+
+  if (!baseUrl) {
+    throw new ConfigError(
+      `Provider "${config.provider}" needs an endpoint URL. ` +
+        `Set endpoint.baseUrl in the config or AIR_REVIEW_BASE_URL in the environment.`,
+    );
+  }
+  if (baseUrl.includes("<")) {
+    throw new ConfigError(
+      `Provider "${config.provider}" needs a concrete endpoint URL: "${baseUrl}". ` +
+        `${preset.note ?? ""} See ${preset.docsUrl ?? "the provider docs"}.`.trim(),
+    );
+  }
+
+  // "bearer" overrides the preset's header convention: Entra ID tokens and OAuth
+  // gateways always expect `Authorization: Bearer <token>`, even on Azure hosts.
+  const bearer = endpoint.auth === "bearer";
+
+  return {
+    api: endpoint.api ?? "auto",
+    temperature:
+      endpoint.temperature !== undefined
+        ? endpoint.temperature
+        : config.provider.startsWith("azure-")
+          ? null
+          : undefined,
+    maxTokensParameter:
+      endpoint.maxTokensParameter ??
+      (config.provider.startsWith("azure-") ? "max_completion_tokens" : "max_tokens"),
+    providerId: preset.id,
+    preset,
+    baseUrl: normalizeBaseUrl(baseUrl, preset.id),
+    apiKey,
+    apiKeyEnv,
+    apiKeyHeader: bearer
+      ? "authorization"
+      : (pick(endpoint.apiKeyHeader, legacy.apiKeyHeader, preset.apiKeyHeader) ?? "authorization"),
+    apiKeyPrefix: bearer
+      ? "Bearer "
+      : (pick(endpoint.apiKeyPrefix, legacy.apiKeyPrefix, preset.apiKeyPrefix) ?? "Bearer "),
+    chatPath: pick(endpoint.chatPath, legacy.chatPath, preset.chatPath) ?? "/chat/completions",
+    modelsPath: pick(endpoint.modelsPath, legacy.modelsPath, preset.modelsPath) ?? "/models",
+    listModels: pick(endpoint.listModels, legacy.listModels, preset.listModels) ?? true,
+    timeoutMs: endpoint.timeoutMs,
+    headers: { ...legacy.headers, ...endpoint.headers },
+  };
+}

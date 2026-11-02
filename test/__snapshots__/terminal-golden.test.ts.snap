@@ -1,0 +1,651 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`terminal golden reports > ASCII fallback 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  1 issue needs attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MAJOR                                                    src/widget.ts:3
+    Subscription survives the component
+
+    TypeScript / line 3 highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+    4 |   }
+    5 | }
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Angular lifecycle cleanup / 94% confidence
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > blocking finding 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  1 issue needs attention.
+  Policy gate failed: blocking issues must be addressed.
+
+  01  CRITICAL                                                 src/widget.ts:3
+    Subscription survives the component
+
+    TypeScript / line 3 highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+    4 |   }
+    5 | }
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Angular lifecycle cleanup / 94% confidence
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > color disabled 1`] = `
+"
+  AIR REVIEW                                                   demo · 12345678
+  Local review · AI + structural review
+
+  1 issue needs attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MAJOR                                                    src/widget.ts:3
+    Subscription survives the component
+
+    TypeScript · line 3 highlighted
+    1 │ class Widget {
+    2 │   ngOnInit() {
+  > 3 │     this.events$.subscribe(() => {});
+    4 │   }
+    5 │ }
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Angular lifecycle cleanup · 94% confidence
+    angular.subscription-lifecycle · air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 · 0.2 s · 2 API calls
+  Input   1,000 tokens · 500 from provider cache
+  Output  250 tokens · 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > high confidence 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  1 issue needs attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MAJOR                                                    src/widget.ts:3
+    Subscription survives the component
+
+    TypeScript / line 3 highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+    4 |   }
+    5 | }
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Angular lifecycle cleanup / 99% confidence
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > long path 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  1 issue needs attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MAJOR
+    src/features/customers/components/forms/a-very-long-customer-name.component.
+    ts:3
+    Subscription survives the component
+
+    Code excerpt unavailable at this revision.
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Angular lifecycle cleanup / 94% confidence
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > low confidence 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  1 issue needs attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MAJOR                                                    src/widget.ts:3
+    Subscription survives the component
+
+    TypeScript / line 3 highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+    4 |   }
+    5 | }
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Angular lifecycle cleanup / 53% confidence
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > missing optional evidence and recommend… 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  1 issue needs attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MAJOR                                                    src/widget.ts:3
+    Subscription survives the component
+
+    TypeScript / line 3 highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+    4 |   }
+    5 | }
+
+    The event stream stays active after the component is destroyed.
+
+    94% confidence
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > multiline source range 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  1 issue needs attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MAJOR                                                  src/widget.ts:2-4
+    Subscription survives the component
+
+    TypeScript / lines 2-4 highlighted
+    1 | class Widget {
+  > 2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+  > 4 |   }
+    5 | }
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Angular lifecycle cleanup / 94% confidence
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > multiple findings 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  2 issues need attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MAJOR                                                    src/widget.ts:3
+    Subscription survives the component
+
+    TypeScript / line 3 highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+    4 |   }
+    5 | }
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Angular lifecycle cleanup / 94% confidence
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  02  MINOR                                                    src/widget.ts:3
+    Handle an empty response
+
+    TypeScript / line 3 highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+    4 |   }
+    5 | }
+
+    An empty response reaches the success handler without a value.
+
+    Return early when the response is empty.
+
+    Angular lifecycle cleanup / 94% confidence
+    angular.subscription-lifecycle / air-review explain arf_second
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > narrow 32 columns 1`] = `
+"
+  AIR REVIEW   demo / 12345678
+  Local review / AI + structural
+  review
+
+  1 issue needs attention.
+  Policy gate passed: no issue
+  meets the blocking threshold.
+
+  01  MAJOR    src/widget.ts:3
+    Subscription survives the
+    component
+
+    TypeScript / line 3
+    highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subsc
+  >   | ribe(() => {});
+    4 |   }
+    5 | }
+
+    The event stream stays
+    active after the component
+    is destroyed.
+
+    Use takeUntilDestroyed(this.
+    destroyRef).
+
+    Angular lifecycle cleanup /
+    94% confidence
+    angular.subscription-lifecyc
+    le / air-review explain
+    arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042
+  / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500
+  from provider cache
+  Output  250 tokens / 100
+  reasoning
+  Cache is included in input;
+  reasoning is included in
+  output.
+  Cost uses your configured
+  rates; it is not the provider
+  invoice.
+
+  Review notes
+  Prompt-injection text detected
+  at src/price.ts:1. Treated as
+  repository data, not reviewer
+  instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request
+  comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > no findings 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  No open findings.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > non-blocking advisory 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  1 issue needs attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MINOR                                                    src/widget.ts:3
+    Subscription survives the component
+
+    TypeScript / line 3 highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+    4 |   }
+    5 | }
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Angular lifecycle cleanup / 94% confidence / Follow-up
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > one finding 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  1 issue needs attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MAJOR                                                    src/widget.ts:3
+    Subscription survives the component
+
+    TypeScript / line 3 highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+    4 |   }
+    5 | }
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Angular lifecycle cleanup / 94% confidence
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > suggested code 1`] = `
+"
+  AIR REVIEW                                                   demo / 12345678
+  Local review / AI + structural review
+
+  1 issue needs attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MAJOR                                                    src/widget.ts:3
+    Subscription survives the component
+
+    TypeScript / line 3 highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+    4 |   }
+    5 | }
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Fix example / typescript
+    this.events$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(value => console.log(value));
+
+    Angular lifecycle cleanup / 94% confidence
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data,
+  not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;
+
+exports[`terminal golden reports > wide 112 columns 1`] = `
+"
+  AIR REVIEW                                                                                   demo / 12345678
+  Local review / AI + structural review
+
+  1 issue needs attention.
+  Policy gate passed: no issue meets the blocking threshold.
+
+  01  MAJOR                                                                                    src/widget.ts:3
+    Subscription survives the component
+
+    TypeScript / line 3 highlighted
+    1 | class Widget {
+    2 |   ngOnInit() {
+  > 3 |     this.events$.subscribe(() => {});
+    4 |   }
+    5 | }
+
+    The event stream stays active after the component is destroyed.
+
+    Use takeUntilDestroyed(this.destroyRef).
+
+    Angular lifecycle cleanup / 94% confidence
+    angular.subscription-lifecycle / air-review explain arf_123456
+
+  Usage & cost
+  Estimated cost (USD)  ~$0.0042 / 0.2 s / 2 API calls
+  Input   1,000 tokens / 500 from provider cache
+  Output  250 tokens / 100 reasoning
+  Cache is included in input; reasoning is included in output.
+  Cost uses your configured rates; it is not the provider invoice.
+
+  Review notes
+  Prompt-injection text detected at src/price.ts:1. Treated as repository data, not reviewer instructions.
+
+  Report  .air-review/summary.md
+  Memory  .air-review/context.md
+  Saved locally. No pull-request comments published (dry-run).
+"
+`;

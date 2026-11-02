@@ -1,0 +1,490 @@
+{
+  "$ref": "#/definitions/AirReviewConfig",
+  "definitions": {
+    "AirReviewConfig": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 1,
+          "default": 1
+        },
+        "frameworks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": [
+            "angular"
+          ]
+        },
+        "provider": {
+          "type": "string",
+          "default": "openai"
+        },
+        "endpoint": {
+          "type": "object",
+          "properties": {
+            "temperature": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 2
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "maxTokensParameter": {
+              "type": "string",
+              "enum": [
+                "max_tokens",
+                "max_completion_tokens"
+              ]
+            },
+            "baseUrl": {
+              "type": "string"
+            },
+            "auth": {
+              "type": "string",
+              "enum": [
+                "api-key",
+                "bearer"
+              ]
+            },
+            "api": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "chat-completions",
+                "responses"
+              ]
+            },
+            "apiKeyEnv": {
+              "type": "string"
+            },
+            "apiKey": {
+              "type": "string"
+            },
+            "apiKeyHeader": {
+              "type": "string"
+            },
+            "apiKeyPrefix": {
+              "type": "string"
+            },
+            "chatPath": {
+              "type": "string"
+            },
+            "modelsPath": {
+              "type": "string"
+            },
+            "listModels": {
+              "type": "boolean"
+            },
+            "timeoutMs": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "default": 120000
+            },
+            "headers": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "default": {}
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "models": {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "string"
+            },
+            "roles": {
+              "type": "object",
+              "properties": {
+                "planner": {
+                  "type": "string"
+                },
+                "reviewer": {
+                  "type": "string"
+                },
+                "verifier": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "default": {}
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "ollama": {
+          "type": "object",
+          "properties": {
+            "baseUrl": {
+              "type": "string",
+              "format": "uri",
+              "default": "http://127.0.0.1:11434"
+            },
+            "timeoutMs": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "default": 180000
+            },
+            "numCtx": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "keepAlive": {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            "apiKeyEnv": {
+              "type": "string"
+            },
+            "headers": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "default": {}
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "openai": {
+          "type": "object",
+          "properties": {
+            "baseUrl": {
+              "type": "string",
+              "format": "uri"
+            },
+            "apiKeyEnv": {
+              "type": "string"
+            },
+            "apiKey": {
+              "type": "string"
+            },
+            "apiKeyHeader": {
+              "type": "string"
+            },
+            "apiKeyPrefix": {
+              "type": "string"
+            },
+            "chatPath": {
+              "type": "string"
+            },
+            "modelsPath": {
+              "type": "string"
+            },
+            "listModels": {
+              "type": "boolean"
+            },
+            "headers": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "default": {}
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "features": {
+          "type": "object",
+          "properties": {
+            "ollama": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "telemetry": {
+          "type": "object",
+          "properties": {
+            "log": {
+              "type": "string",
+              "default": ".air-review/telemetry.jsonl"
+            },
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "pricing": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "output": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "cachedInput": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "input",
+                  "output"
+                ],
+                "additionalProperties": false
+              },
+              "default": {}
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "context": {
+          "type": "object",
+          "properties": {
+            "strategy": {
+              "type": "string",
+              "enum": [
+                "structural-selective"
+              ],
+              "default": "structural-selective"
+            },
+            "semanticFallback": {
+              "type": "boolean",
+              "default": false
+            },
+            "maxContextRequests": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20
+            },
+            "maxEvidenceTokens": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 500000,
+              "default": 30000
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "review": {
+          "type": "object",
+          "properties": {
+            "severities": {
+              "type": "object",
+              "properties": {
+                "publish": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "BLOCKER",
+                      "CRITICAL",
+                      "MAJOR",
+                      "MINOR",
+                      "INFO"
+                    ]
+                  },
+                  "default": [
+                    "BLOCKER",
+                    "CRITICAL",
+                    "MAJOR",
+                    "MINOR"
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "default": {}
+            },
+            "gate": {
+              "type": "object",
+              "properties": {
+                "severities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "BLOCKER",
+                      "CRITICAL",
+                      "MAJOR",
+                      "MINOR",
+                      "INFO"
+                    ]
+                  },
+                  "default": [
+                    "BLOCKER",
+                    "CRITICAL"
+                  ]
+                },
+                "minimumConfidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.9
+                }
+              },
+              "additionalProperties": false,
+              "default": {}
+            },
+            "maxFindings": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 40
+            },
+            "maxOutputTokens": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 128000,
+              "default": 16384
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "memory": {
+          "type": "object",
+          "properties": {
+            "backend": {
+              "type": "string",
+              "enum": [
+                "pr-ledger",
+                "local",
+                "none"
+              ],
+              "default": "pr-ledger"
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "cache": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "dir": {
+              "type": "string",
+              "default": ".air-review/cache"
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "privacy": {
+          "type": "object",
+          "properties": {
+            "redactSecrets": {
+              "type": "boolean",
+              "default": true
+            },
+            "sendFullFiles": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "platform": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": [
+                "github",
+                "azure-devops",
+                "local"
+              ],
+              "default": "local"
+            },
+            "publish": {
+              "type": "boolean",
+              "default": false
+            },
+            "github": {
+              "type": "object",
+              "properties": {
+                "owner": {
+                  "type": "string"
+                },
+                "repo": {
+                  "type": "string"
+                },
+                "tokenEnv": {
+                  "type": "string",
+                  "default": "GITHUB_TOKEN"
+                },
+                "apiBaseUrl": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "additionalProperties": false,
+              "default": {}
+            },
+            "azureDevops": {
+              "type": "object",
+              "properties": {
+                "organizationUrl": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "project": {
+                  "type": "string"
+                },
+                "repository": {
+                  "type": "string"
+                },
+                "tokenEnv": {
+                  "type": "string",
+                  "default": "SYSTEM_ACCESSTOKEN"
+                },
+                "apiVersion": {
+                  "type": "string",
+                  "default": "7.1"
+                }
+              },
+              "additionalProperties": false,
+              "default": {}
+            },
+            "local": {
+              "type": "object",
+              "properties": {
+                "base": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "default": {}
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Configuration schema for air-review. Every option has a default; see docs/configuration.md."
+}
