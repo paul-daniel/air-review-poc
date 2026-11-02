@@ -2,14 +2,14 @@
 
 ## How the leading tools format their feedback
 
-| Aspect | CodeRabbit | Qodo / PR-Agent | GitHub Copilot code review |
-| ------ | ---------- | --------------- | -------------------------- |
-| Top-level comment | a **walkthrough** posted "at the top of every pull request", with "Changed files summary", "Sequence diagrams", "Estimated review effort" (1–5), "Merge Risk", related issues/PRs, suggested labels and reviewers ([walkthroughs](https://docs.coderabbit.ai/pr-reviews/walkthroughs.md)) | one review comment, edited in place on later runs (`persistent_comment`), with "Estimated effort to review", "Relevant tests", "Security concerns", key issues, an optional score and ticket compliance ([review tool](https://raw.githubusercontent.com/qodo-ai/pr-agent/main/docs/docs/tools/review.md)) | an overview comment that "indicates whether Copilot has determined the pull request ready to approve" and shows the effort level used ([Copilot code review](https://docs.github.com/en/copilot/concepts/code-review/code-review)) |
-| Inline comment | category badge (Security & Privacy, Stability & Availability, Data Integrity & Integration, Functional Correctness, Performance & Scalability, Maintainability & Code Quality) plus severity Critical 🔴 / Major 🟠 / Minor 🟡 / Trivial 🔵 / Info ⚪; one-click apply of suggested changes ([code review overview](https://docs.coderabbit.ai/guides/code-review-overview.md)) | findings "anchored to specific code" in the Files changed view, each with an explanation, line references and "fix prompts and remediation guidance"; severity High/Medium/Low ([Qodo code review](https://docs.qodo.ai/code-review/use-qodo-in-prs/code-review.md)) | "identifies issues, and suggests fixes you can apply in a couple of clicks" |
-| Finding axes | type (Nitpick, Potential issue, Refactor suggestion), severity, category, effort/reward, kept as "separate axes" ([findings](https://docs.coderabbit.ai/change-stack/findings.md)) | severity, plus labels on the PR (`Review effort x/5`, `Possible security concern`) | none documented |
-| Verdict | "Merge Risk" Minimal / Low / Moderate / High / Critical, "for the commit it reviewed"; approval withheld when the rating is unavailable ([merge risk](https://docs.coderabbit.ai/pr-reviews/merge-risk.md)) | `require_merge_recommendation`: `no_concerns_found`, `needs_review`, `changes_required` | approving review possible when enabled; "If new commits are pushed after an approval, the approval is dismissed" |
-| New pushes | "Incremental review" that "focuses on newly added changes" and "Maintains conversation context" | `persistent_finding_state` tracks findings "across complete reviews so they can be resolved and reopened"; incremental reviews do not resolve absent findings | reviews once by default, or "every time you push a new commit" when configured |
-| Extras | poem (off by default), fortune while waiting, auto-fix commits | TODO scan, "can be split" check, large-PR chunking | hand-off to the Copilot cloud agent for fixes |
+| Aspect            | CodeRabbit                                                                                                                                                                                                                                                                                                                                                                      | Qodo / PR-Agent                                                                                                                                                                                                                                                                                            | GitHub Copilot code review                                                                                                                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Top-level comment | a **walkthrough** posted "at the top of every pull request", with "Changed files summary", "Sequence diagrams", "Estimated review effort" (1–5), "Merge Risk", related issues/PRs, suggested labels and reviewers ([walkthroughs](https://docs.coderabbit.ai/pr-reviews/walkthroughs.md))                                                                                       | one review comment, edited in place on later runs (`persistent_comment`), with "Estimated effort to review", "Relevant tests", "Security concerns", key issues, an optional score and ticket compliance ([review tool](https://raw.githubusercontent.com/qodo-ai/pr-agent/main/docs/docs/tools/review.md)) | an overview comment that "indicates whether Copilot has determined the pull request ready to approve" and shows the effort level used ([Copilot code review](https://docs.github.com/en/copilot/concepts/code-review/code-review)) |
+| Inline comment    | category badge (Security & Privacy, Stability & Availability, Data Integrity & Integration, Functional Correctness, Performance & Scalability, Maintainability & Code Quality) plus severity Critical 🔴 / Major 🟠 / Minor 🟡 / Trivial 🔵 / Info ⚪; one-click apply of suggested changes ([code review overview](https://docs.coderabbit.ai/guides/code-review-overview.md)) | findings "anchored to specific code" in the Files changed view, each with an explanation, line references and "fix prompts and remediation guidance"; severity High/Medium/Low ([Qodo code review](https://docs.qodo.ai/code-review/use-qodo-in-prs/code-review.md))                                       | "identifies issues, and suggests fixes you can apply in a couple of clicks"                                                                                                                                                        |
+| Finding axes      | type (Nitpick, Potential issue, Refactor suggestion), severity, category, effort/reward, kept as "separate axes" ([findings](https://docs.coderabbit.ai/change-stack/findings.md))                                                                                                                                                                                              | severity, plus labels on the PR (`Review effort x/5`, `Possible security concern`)                                                                                                                                                                                                                         | none documented                                                                                                                                                                                                                    |
+| Verdict           | "Merge Risk" Minimal / Low / Moderate / High / Critical, "for the commit it reviewed"; approval withheld when the rating is unavailable ([merge risk](https://docs.coderabbit.ai/pr-reviews/merge-risk.md))                                                                                                                                                                     | `require_merge_recommendation`: `no_concerns_found`, `needs_review`, `changes_required`                                                                                                                                                                                                                    | approving review possible when enabled; "If new commits are pushed after an approval, the approval is dismissed"                                                                                                                   |
+| New pushes        | "Incremental review" that "focuses on newly added changes" and "Maintains conversation context"                                                                                                                                                                                                                                                                                 | `persistent_finding_state` tracks findings "across complete reviews so they can be resolved and reopened"; incremental reviews do not resolve absent findings                                                                                                                                              | reviews once by default, or "every time you push a new commit" when configured                                                                                                                                                     |
+| Extras            | poem (off by default), fortune while waiting, auto-fix commits                                                                                                                                                                                                                                                                                                                  | TODO scan, "can be split" check, large-PR chunking                                                                                                                                                                                                                                                         | hand-off to the Copilot cloud agent for fixes                                                                                                                                                                                      |
 
 Three lessons drive our choices: every tool separates **where** (inline) from
 **what it means overall** (one top-level comment); every tool labels findings
@@ -21,7 +21,7 @@ again.
 
 ### One summary comment, updated in place
 
-```markdown
+````markdown
 ## Air Review — ❌ Changes requested
 
 > reviewed `3f9c1a2e` · 2 open · 1 resolved · tier **heavy** (`gpt-5-codex`) · cost ~$0.031 · 24.8 s
@@ -38,10 +38,10 @@ Signals: 19 file(s), +812/−40 lines, module(s): apps/api, apps/web, libs/share
 
 ### Findings (2 open)
 
-| | Severity | Category | Location | Finding | Scope |
-|---|---|---|---|---|---|
-| 🛑 | CRITICAL | Correctness | `libs/shared/src/pricing/discount.ts:21` | Loyalty discount treats percent as a fraction | IN_PR |
-| 🟠 | MAJOR | Correctness | `apps/web/src/app/features/orders/order-alerts.component.ts:18` | Subscription may outlive its component | IN_PR |
+|     | Severity | Category    | Location                                                        | Finding                                       | Scope |
+| --- | -------- | ----------- | --------------------------------------------------------------- | --------------------------------------------- | ----- |
+| 🛑  | CRITICAL | Correctness | `libs/shared/src/pricing/discount.ts:21`                        | Loyalty discount treats percent as a fraction | IN_PR |
+| 🟠  | MAJOR    | Correctness | `apps/web/src/app/features/orders/order-alerts.component.ts:18` | Subscription may outlive its component        | IN_PR |
 
 ### Since the last review
 
@@ -57,7 +57,7 @@ Signals: 19 file(s), +812/−40 lines, module(s): apps/api, apps/web, libs/share
 </details>
 
 <sub>air-review 0.2.0 · run `ar_1b2c3d4e` · the state thread holds the machine-readable ledger</sub>
-```
+````
 
 Choices and why:
 
@@ -82,7 +82,7 @@ Choices and why:
 
 ### One inline thread per finding
 
-```markdown
+````markdown
 ### 🛑 CRITICAL · Correctness — Loyalty discount treats percent as a fraction
 
 `libs/shared/src/pricing/discount.ts:21` · `applyLoyaltyDiscount`
@@ -96,13 +96,16 @@ charged. `applyPercentDiscount` in the same file divides by 100 first.
 ```typescript
 return applyPercentDiscount(amountMinor, percent);
 ```
+````
 
 **Evidence**
+
 - code-example: libs/shared/src/pricing/discount.ts (`applyPercentDiscount` divides by 100)
 - Angular 19
 
 <sub>Scope IN_PR · confidence 0.93 · rule `pricing.percent-as-fraction` (REPO_CONVENTION) · air-review-id arf_1f3a9c</sub>
-```
+
+`````
 
 Choices and why:
 
@@ -147,3 +150,4 @@ touches docs or an already reviewed head makes no model call at all.
   repository and only ever writes comments, a vote and an optional status.
 - No labels on the pull request: Azure DevOps has none, and the summary
   already carries the information.
+`````

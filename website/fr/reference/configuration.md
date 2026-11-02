@@ -73,15 +73,15 @@ platform:
 
 ### `provider` et `models`
 
-| Clé                     | Défaut                 | Signification                                                                                                                                                                      |
-| ----------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provider`              | `openai`               | identifiant de preset : `openai`, `azure-openai`, `azure-foundry`, `bedrock`, `google`, `anthropic`, `mistral`, `groq`, `openrouter`, `together`, `fireworks`, `openai-compatible` |
-| `models.default`        | suggestion du preset   | repli pour tous les rôles                                                                                                                                                          |
-| `models.roles.reviewer` | `models.default`       | modèle de raisonnement fort, appel 1                                                                                                                                               |
-| `models.roles.verifier` | `models.default`       | modèle petit à moyen, appel 2                                                                                                                                                      |
-| `models.roles.planner`  | relecteur, puis défaut | réservé ; le planificateur est déterministe et n'appelle pas de modèle                                                                                                             |
-| `models.roles.triage`   | planificateur, puis défaut | modèle de triage (bon marché) qui décide du niveau de complexité ; voir `routing` et `models.tiers` dans docs/configuration.md du dépôt |
-| `models.tiers.light` / `heavy` | rôle standard | relecteur/vérificateur par niveau de complexité (`reviewer`, `verifier`) |
+| Clé                            | Défaut                     | Signification                                                                                                                                                                      |
+| ------------------------------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provider`                     | `openai`                   | identifiant de preset : `openai`, `azure-openai`, `azure-foundry`, `bedrock`, `google`, `anthropic`, `mistral`, `groq`, `openrouter`, `together`, `fireworks`, `openai-compatible` |
+| `models.default`               | suggestion du preset       | repli pour tous les rôles                                                                                                                                                          |
+| `models.roles.reviewer`        | `models.default`           | modèle de raisonnement fort, appel 1                                                                                                                                               |
+| `models.roles.verifier`        | `models.default`           | modèle petit à moyen, appel 2                                                                                                                                                      |
+| `models.roles.planner`         | relecteur, puis défaut     | réservé ; le planificateur est déterministe et n'appelle pas de modèle                                                                                                             |
+| `models.roles.triage`          | planificateur, puis défaut | modèle de triage (bon marché) qui décide du niveau de complexité ; voir `routing` et `models.tiers` dans docs/configuration.md du dépôt                                            |
+| `models.tiers.light` / `heavy` | rôle standard              | relecteur/vérificateur par niveau de complexité (`reviewer`, `verifier`)                                                                                                           |
 
 Le moteur consomme des rôles, pas des modèles. Sur Azure, la valeur est toujours le **nom du déploiement**.
 
@@ -181,4 +181,3 @@ platform:
 ```
 
 En mode local, le diff est la base de fusion entre `base` et le commit extrait. En mode GitHub sans jeton, les lectures passent par l'API non authentifiée et toute tentative de publication échoue avec le code `40` et un message explicite.
-

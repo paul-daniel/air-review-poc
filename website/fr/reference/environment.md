@@ -37,16 +37,16 @@ Chaque preset lit sa propre variable quand `AIR_REVIEW_API_KEY` et `AIR_REVIEW_A
 
 ## Rôles de modèle
 
-| Variable                    | Secret | Signification                                                               |
-| --------------------------- | ------ | --------------------------------------------------------------------------- |
-| `AIR_REVIEW_MODEL`          | non    | raccourci pour le modèle relecteur                                          |
-| `AIR_REVIEW_MODEL_REVIEWER` | non    | rôle relecteur (appel 1)                                                    |
-| `AIR_REVIEW_MODEL_VERIFIER` | non    | rôle vérificateur (appel 2)                                                 |
-| `AIR_REVIEW_MODEL_PLANNER`  | non    | rôle planificateur ; réservé, le planificateur est déterministe aujourd'hui |
-| `AIR_REVIEW_MODEL_TRIAGE`   | non    | rôle de triage (niveau de complexité)                                       |
-| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY` | non | relecteur par niveau de complexité                          |
-| `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY` | non | vérificateur par niveau de complexité                       |
-| `AIR_REVIEW_ROUTING_MODE`   | non    | `deterministic`, `hybrid` (défaut) ou `model`                               |
+| Variable                                     | Secret | Signification                                                               |
+| -------------------------------------------- | ------ | --------------------------------------------------------------------------- |
+| `AIR_REVIEW_MODEL`                           | non    | raccourci pour le modèle relecteur                                          |
+| `AIR_REVIEW_MODEL_REVIEWER`                  | non    | rôle relecteur (appel 1)                                                    |
+| `AIR_REVIEW_MODEL_VERIFIER`                  | non    | rôle vérificateur (appel 2)                                                 |
+| `AIR_REVIEW_MODEL_PLANNER`                   | non    | rôle planificateur ; réservé, le planificateur est déterministe aujourd'hui |
+| `AIR_REVIEW_MODEL_TRIAGE`                    | non    | rôle de triage (niveau de complexité)                                       |
+| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY` | non    | relecteur par niveau de complexité                                          |
+| `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY` | non    | vérificateur par niveau de complexité                                       |
+| `AIR_REVIEW_ROUTING_MODE`                    | non    | `deterministic`, `hybrid` (défaut) ou `model`                               |
 
 Sur Azure, ce sont des **noms de déploiement**, pas des identifiants de modèle.
 

@@ -18,21 +18,21 @@ per run, named after the run id shown in the summary:
 
 The step table:
 
-| Step | Status | Agent · model | Duration | Input | Cached | Output | Est. cost |
-|---|---|---|---:|---:|---:|---:|---:|
-| Load review memory | ✓ | deterministic | 0.4 s | – | – | – | – |
-| Compute delta | ✓ | deterministic | 0.1 s | – | – | – | – |
-| Structural analysis & context plan | ✓ | deterministic | 0.3 s | – | – | – | – |
-| Deterministic rules | ✓ | deterministic | 0.2 s | – | – | – | – |
-| Triage | ✓ | triage · `gpt-5-mini` | 1.1 s | 1,840 | 0 | 62 | ~$0.0006 |
-| Reviewer (heavy) | ✓ | reviewer · `gpt-5-codex` | 19.6 s | 9,010 | 8,064 | 1,930 | ~$0.0206 |
-| Deterministic verification | ✓ | deterministic | 0.0 s | – | – | – | – |
-| Verifier | ✓ | verifier · `gpt-5-mini` | 2.4 s | 2,310 | 0 | 240 | ~$0.0011 |
-| Reconcile with previous findings | ✓ | deterministic | 0.0 s | – | – | – | – |
-| Policy gate | ✓ | deterministic | 0.0 s | – | – | – | – |
-| Publish to the pull request | ✓ | deterministic | 1.2 s | – | – | – | – |
-| Verdict: request-changes | ✓ | deterministic | 0.5 s | – | – | – | – |
-| **Total** | | 3 model calls | **25.8 s** | **13,160** | 8,064 | **2,232** | **~$0.022** |
+| Step                               | Status | Agent · model            |   Duration |      Input | Cached |    Output |   Est. cost |
+| ---------------------------------- | ------ | ------------------------ | ---------: | ---------: | -----: | --------: | ----------: |
+| Load review memory                 | ✓      | deterministic            |      0.4 s |          – |      – |         – |           – |
+| Compute delta                      | ✓      | deterministic            |      0.1 s |          – |      – |         – |           – |
+| Structural analysis & context plan | ✓      | deterministic            |      0.3 s |          – |      – |         – |           – |
+| Deterministic rules                | ✓      | deterministic            |      0.2 s |          – |      – |         – |           – |
+| Triage                             | ✓      | triage · `gpt-5-mini`    |      1.1 s |      1,840 |      0 |        62 |    ~$0.0006 |
+| Reviewer (heavy)                   | ✓      | reviewer · `gpt-5-codex` |     19.6 s |      9,010 |  8,064 |     1,930 |    ~$0.0206 |
+| Deterministic verification         | ✓      | deterministic            |      0.0 s |          – |      – |         – |           – |
+| Verifier                           | ✓      | verifier · `gpt-5-mini`  |      2.4 s |      2,310 |      0 |       240 |    ~$0.0011 |
+| Reconcile with previous findings   | ✓      | deterministic            |      0.0 s |          – |      – |         – |           – |
+| Policy gate                        | ✓      | deterministic            |      0.0 s |          – |      – |         – |           – |
+| Publish to the pull request        | ✓      | deterministic            |      1.2 s |          – |      – |         – |           – |
+| Verdict: request-changes           | ✓      | deterministic            |      0.5 s |          – |      – |         – |           – |
+| **Total**                          |        | 3 model calls            | **25.8 s** | **13,160** |  8,064 | **2,232** | **~$0.022** |
 
 Statuses: `✓` done, `⟳ cache` served from the local result cache (no request
 sent), `– skipped` (not needed: already reviewed head, docs-only push,
@@ -127,10 +127,10 @@ history per branch.
 
 ## Metrics worth tracking over time
 
-| Metric | Where | Why |
-| ------ | ----- | --- |
-| cost / pull request and cost / tier | telemetry `estimatedCostUsd`, `routing.tier` | is routing saving money? |
-| share of runs with `reviewer` skipped or cached | `steps[]` | incremental and cache behaviour |
-| findings dropped by the verifier | summary notes | reviewer precision |
-| resolved vs reopened events | summary "Since the last review", state history | finding lifecycle health |
-| duration p50 / p95 | `durationMs` | pipeline latency budget |
+| Metric                                          | Where                                          | Why                             |
+| ----------------------------------------------- | ---------------------------------------------- | ------------------------------- |
+| cost / pull request and cost / tier             | telemetry `estimatedCostUsd`, `routing.tier`   | is routing saving money?        |
+| share of runs with `reviewer` skipped or cached | `steps[]`                                      | incremental and cache behaviour |
+| findings dropped by the verifier                | summary notes                                  | reviewer precision              |
+| resolved vs reopened events                     | summary "Since the last review", state history | finding lifecycle health        |
+| duration p50 / p95                              | `durationMs`                                   | pipeline latency budget         |

@@ -57,19 +57,19 @@ tool then fails with a message pointing back here. Keep `fetchDepth: 0`.
 
 Pipelines → Library → `+ Variable group`, linked to the pipeline:
 
-| Kind     | Name                                  | Example                                          |
-| -------- | ------------------------------------- | ------------------------------------------------ |
-| Variable | `AIR_REVIEW_PROVIDER`                 | `azure-foundry`                                  |
-| Variable | `AIR_REVIEW_BASE_URL`                 | `https://my-resource.services.ai.azure.com`      |
-| Variable | `AIR_REVIEW_MODEL_TRIAGE`             | `gpt-5-mini` (cheap deployment)                  |
-| Variable | `AIR_REVIEW_MODEL_REVIEWER`           | `gpt-5` (standard tier)                          |
-| Variable | `AIR_REVIEW_MODEL_VERIFIER`           | `gpt-5-mini`                                     |
-| Variable | `AIR_REVIEW_MODEL_REVIEWER_LIGHT`     | `gpt-5-mini` (light tier)                        |
-| Variable | `AIR_REVIEW_MODEL_REVIEWER_HEAVY`     | `gpt-5-codex` (heavy tier)                       |
-| Variable | `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY` | optional per-tier verifiers               |
-| Variable | `AIR_REVIEW_ROUTING_MODE`             | `hybrid` (default), `deterministic` or `model`   |
-| Variable | `AIR_REVIEW_PRICING`                  | `{"gpt-5":{"input":1.25,"cachedInput":0.125,"output":10},...}` |
-| Secret   | `AIR_REVIEW_API_KEY`                  | Foundry key (lock icon); or an `AzureCLI@2` step exporting `AIR_REVIEW_ACCESS_TOKEN` |
+| Kind     | Name                                         | Example                                                                              |
+| -------- | -------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Variable | `AIR_REVIEW_PROVIDER`                        | `azure-foundry`                                                                      |
+| Variable | `AIR_REVIEW_BASE_URL`                        | `https://my-resource.services.ai.azure.com`                                          |
+| Variable | `AIR_REVIEW_MODEL_TRIAGE`                    | `gpt-5-mini` (cheap deployment)                                                      |
+| Variable | `AIR_REVIEW_MODEL_REVIEWER`                  | `gpt-5` (standard tier)                                                              |
+| Variable | `AIR_REVIEW_MODEL_VERIFIER`                  | `gpt-5-mini`                                                                         |
+| Variable | `AIR_REVIEW_MODEL_REVIEWER_LIGHT`            | `gpt-5-mini` (light tier)                                                            |
+| Variable | `AIR_REVIEW_MODEL_REVIEWER_HEAVY`            | `gpt-5-codex` (heavy tier)                                                           |
+| Variable | `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY` | optional per-tier verifiers                                                          |
+| Variable | `AIR_REVIEW_ROUTING_MODE`                    | `hybrid` (default), `deterministic` or `model`                                       |
+| Variable | `AIR_REVIEW_PRICING`                         | `{"gpt-5":{"input":1.25,"cachedInput":0.125,"output":10},...}`                       |
+| Secret   | `AIR_REVIEW_API_KEY`                         | Foundry key (lock icon); or an `AzureCLI@2` step exporting `AIR_REVIEW_ACCESS_TOKEN` |
 
 The same names work on GitHub Actions, so one `air-review.yaml` serves both
 platforms. Model and tier variables are documented in [foundry.md](foundry.md).
@@ -98,14 +98,14 @@ No configuration is needed inside a PR validation build. The adapter is
 selected when `TF_BUILD=True` and `SYSTEM_PULLREQUEST_PULLREQUESTID` are set,
 and reads:
 
-| Variable                                                                                                                                                          | Used for         |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `SYSTEM_TEAMFOUNDATIONCOLLECTIONURI`                                                                                                                              | organization URL |
-| `SYSTEM_TEAMPROJECT`                                                                                                                                              | project          |
-| `BUILD_REPOSITORY_ID` (GUID) or `BUILD_REPOSITORY_NAME`                                                                                                           | repository       |
-| `SYSTEM_PULLREQUEST_PULLREQUESTID`                                                                                                                                | pull request id  |
+| Variable                                                                                                                                                          | Used for                    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `SYSTEM_TEAMFOUNDATIONCOLLECTIONURI`                                                                                                                              | organization URL            |
+| `SYSTEM_TEAMPROJECT`                                                                                                                                              | project                     |
+| `BUILD_REPOSITORY_ID` (GUID) or `BUILD_REPOSITORY_NAME`                                                                                                           | repository                  |
+| `SYSTEM_PULLREQUEST_PULLREQUESTID`                                                                                                                                | pull request id             |
 | `BUILD_BUILDID`                                                                                                                                                   | link on the optional status |
-| `SYSTEM_ACCESSTOKEN` (default `platform.azureDevops.tokenEnv`), then `AZURE_DEVOPS_ACCESS_TOKEN` (Entra ID, bearer), `AZURE_DEVOPS_EXT_PAT`, `AZURE_DEVOPS_TOKEN` | token            |
+| `SYSTEM_ACCESSTOKEN` (default `platform.azureDevops.tokenEnv`), then `AZURE_DEVOPS_ACCESS_TOKEN` (Entra ID, bearer), `AZURE_DEVOPS_EXT_PAT`, `AZURE_DEVOPS_TOKEN` | token                       |
 
 On an Azure Pipelines build that is **not** a pull request (a CI build of
 `main`), the tool warns and reviews locally against `platform.local.base`
@@ -137,10 +137,10 @@ platform:
 
 ## Threads as review memory
 
-| Thread          | Content                                                                                  | Status                                                                                        |
-| --------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| state           | the machine-readable `air-review:state` envelope (SHAs, findings, fingerprints, metrics) | `closed`, so it stays collapsed                                                               |
-| summary         | verdict, routing, findings table, "since the last review", cost per step, workflow      | `active` while findings are open, `fixed` once all were resolved, `closed` if nothing to report |
+| Thread          | Content                                                                                  | Status                                                                                               |
+| --------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| state           | the machine-readable `air-review:state` envelope (SHAs, findings, fingerprints, metrics) | `closed`, so it stays collapsed                                                                      |
+| summary         | verdict, routing, findings table, "since the last review", cost per step, workflow       | `active` while findings are open, `fixed` once all were resolved, `closed` if nothing to report      |
 | one per finding | the finding, anchored on the head side of the file (`threadContext.rightFileStart/End`)  | `active`; `fixed` with a "Resolved" reply when it no longer reproduces; back to `active` if reopened |
 
 Thread statuses `active`, `fixed`, `wontFix`, `closed`, `byDesign`, `pending`
@@ -164,13 +164,13 @@ published.
 
 ### Incremental review on a new push
 
-| Push | What happens | Model calls |
-| ---- | ------------ | ----------- |
-| same head, same configuration (re-queued build) | nothing is reviewed again, even with `--publish`; `--force` overrides | 0 |
-| new commits | the delta is computed **since the last reviewed head**; only those files reach the reviewer; previous findings are reconciled (kept, resolved, reopened) | triage + reviewer + verifier on the new delta only |
-| new commits touching only docs or binaries (`review.modelSkipKinds`) | deterministic rules run, previous findings carried over, summary notes "nothing new for the reviewer" | 0 |
-| target branch moved | full re-review against the new base; existing threads are updated, not duplicated | as a full review |
-| configuration or models changed | full re-review; findings are matched to existing threads | as a full review |
+| Push                                                                 | What happens                                                                                                                                             | Model calls                                        |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| same head, same configuration (re-queued build)                      | nothing is reviewed again, even with `--publish`; `--force` overrides                                                                                    | 0                                                  |
+| new commits                                                          | the delta is computed **since the last reviewed head**; only those files reach the reviewer; previous findings are reconciled (kept, resolved, reopened) | triage + reviewer + verifier on the new delta only |
+| new commits touching only docs or binaries (`review.modelSkipKinds`) | deterministic rules run, previous findings carried over, summary notes "nothing new for the reviewer"                                                    | 0                                                  |
+| target branch moved                                                  | full re-review against the new base; existing threads are updated, not duplicated                                                                        | as a full review                                   |
+| configuration or models changed                                      | full re-review; findings are matched to existing threads                                                                                                 | as a full review                                   |
 
 The local result cache (`cache.dir`) additionally serves identical reviewer
 inputs without a request.
@@ -184,12 +184,12 @@ documented values are "10 - approved 5 - approved with suggestions 0 - no vote
 -5 - waiting for author -10 - rejected"
 ([Pull Request Reviewers - Create](https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-reviewers/create-pull-request-reviewer?view=azure-devops-rest-7.1)).
 
-| Verdict | Condition | Vote |
-| ------- | --------- | ---- |
-| Approved | no open finding | `10` |
-| Approved with suggestions | open findings, none blocking (gate passed), `vote.approveWithSuggestions: true` | `5` |
-| Changes requested | the gate failed (blocking `IN_PR` findings above the confidence threshold) | `-5` |
-| Commented | the review could not complete (model error) | `0`, never a vote on partial data |
+| Verdict                   | Condition                                                                       | Vote                              |
+| ------------------------- | ------------------------------------------------------------------------------- | --------------------------------- |
+| Approved                  | no open finding                                                                 | `10`                              |
+| Approved with suggestions | open findings, none blocking (gate passed), `vote.approveWithSuggestions: true` | `5`                               |
+| Changes requested         | the gate failed (blocking `IN_PR` findings above the confidence threshold)      | `-5`                              |
+| Commented                 | the review could not complete (model error)                                     | `0`, never a vote on partial data |
 
 The tool never casts `-10` and never completes or merges the pull request.
 With `platform.azureDevops.status.enabled: true` it also posts a pull-request
@@ -225,17 +225,17 @@ tokens are sent as `Authorization: Bearer`; PATs and `System.AccessToken` use
 
 ## REST endpoints used (api-version 7.1)
 
-| Call                    | Endpoint                                                              |
-| ----------------------- | --------------------------------------------------------------------- |
-| read the PR             | `GET {org}/{project}/_apis/git/repositories/{repo}/pullRequests/{id}` |
-| find air-review threads | `GET .../pullRequests/{id}/threads`                                   |
-| create a thread         | `POST .../pullRequests/{id}/threads`                                  |
-| change a thread status  | `PATCH .../pullRequests/{id}/threads/{threadId}`                      |
-| update a comment        | `PATCH .../pullRequests/{id}/threads/{threadId}/comments/{commentId}` |
-| reply in a thread       | `POST .../pullRequests/{id}/threads/{threadId}/comments`              |
-| who am I                | `GET {org}/_apis/connectionData` (api-version `7.1-preview.1`)        |
+| Call                    | Endpoint                                                               |
+| ----------------------- | ---------------------------------------------------------------------- |
+| read the PR             | `GET {org}/{project}/_apis/git/repositories/{repo}/pullRequests/{id}`  |
+| find air-review threads | `GET .../pullRequests/{id}/threads`                                    |
+| create a thread         | `POST .../pullRequests/{id}/threads`                                   |
+| change a thread status  | `PATCH .../pullRequests/{id}/threads/{threadId}`                       |
+| update a comment        | `PATCH .../pullRequests/{id}/threads/{threadId}/comments/{commentId}`  |
+| reply in a thread       | `POST .../pullRequests/{id}/threads/{threadId}/comments`               |
+| who am I                | `GET {org}/_apis/connectionData` (api-version `7.1-preview.1`)         |
 | vote                    | `PUT .../pullRequests/{id}/reviewers/{reviewerId}` body `{ vote, id }` |
-| status (optional)       | `POST .../pullRequests/{id}/statuses`                                 |
+| status (optional)       | `POST .../pullRequests/{id}/statuses`                                  |
 
 Reference: <https://learn.microsoft.com/en-us/rest/api/azure/devops/git/>.
 Pull-request iterations (`GET .../pullRequests/{id}/iterations`, one per

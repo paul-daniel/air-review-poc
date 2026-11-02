@@ -73,15 +73,15 @@ platform:
 
 ### `provider` and `models`
 
-| Key                     | Default                | Meaning                                                                                                                                                               |
-| ----------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provider`              | `openai`               | preset id: `openai`, `azure-openai`, `azure-foundry`, `bedrock`, `google`, `anthropic`, `mistral`, `groq`, `openrouter`, `together`, `fireworks`, `openai-compatible` |
-| `models.default`        | preset suggestion      | fallback for every role                                                                                                                                               |
-| `models.roles.reviewer` | `models.default`       | strong reasoning model, model call 1                                                                                                                                  |
-| `models.roles.verifier` | `models.default`       | cheap to medium model, model call 2                                                                                                                                   |
-| `models.roles.planner`  | reviewer, then default | reserved; the planner is deterministic and does not call a model                                                                                                      |
-| `models.roles.triage`   | planner, then default  | cheap triage model that decides the complexity tier; see `routing` and `models.tiers` in the repository's docs/configuration.md |
-| `models.tiers.light` / `heavy` | standard role | reviewer/verifier per complexity tier (`reviewer`, `verifier`) |
+| Key                            | Default                | Meaning                                                                                                                                                               |
+| ------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provider`                     | `openai`               | preset id: `openai`, `azure-openai`, `azure-foundry`, `bedrock`, `google`, `anthropic`, `mistral`, `groq`, `openrouter`, `together`, `fireworks`, `openai-compatible` |
+| `models.default`               | preset suggestion      | fallback for every role                                                                                                                                               |
+| `models.roles.reviewer`        | `models.default`       | strong reasoning model, model call 1                                                                                                                                  |
+| `models.roles.verifier`        | `models.default`       | cheap to medium model, model call 2                                                                                                                                   |
+| `models.roles.planner`         | reviewer, then default | reserved; the planner is deterministic and does not call a model                                                                                                      |
+| `models.roles.triage`          | planner, then default  | cheap triage model that decides the complexity tier; see `routing` and `models.tiers` in the repository's docs/configuration.md                                       |
+| `models.tiers.light` / `heavy` | standard role          | reviewer/verifier per complexity tier (`reviewer`, `verifier`)                                                                                                        |
 
 Roles, not models, are what the engine consumes. On Azure the value is always the **deployment name**.
 
@@ -181,4 +181,3 @@ platform:
 ```
 
 In local mode the diff is the merge base of `base` and the checked-out commit. In GitHub mode without a token, reads use the unauthenticated API and any publish attempt fails with exit code `40` and an actionable message.
-

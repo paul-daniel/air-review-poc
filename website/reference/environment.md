@@ -37,16 +37,16 @@ Each preset reads its own variable when `AIR_REVIEW_API_KEY` and `AIR_REVIEW_API
 
 ## Model roles
 
-| Variable                    | Secret | Meaning                                                    |
-| --------------------------- | ------ | ---------------------------------------------------------- |
-| `AIR_REVIEW_MODEL`          | no     | shortcut for the reviewer model                            |
-| `AIR_REVIEW_MODEL_REVIEWER` | no     | reviewer role (model call 1)                               |
-| `AIR_REVIEW_MODEL_VERIFIER` | no     | verifier role (model call 2)                               |
-| `AIR_REVIEW_MODEL_PLANNER`  | no     | planner role; reserved, the planner is deterministic today |
-| `AIR_REVIEW_MODEL_TRIAGE`   | no     | triage role (complexity tier)                              |
-| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY` | no | reviewer per complexity tier                    |
-| `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY` | no | verifier per complexity tier                    |
-| `AIR_REVIEW_ROUTING_MODE`   | no     | `deterministic`, `hybrid` (default) or `model`             |
+| Variable                                     | Secret | Meaning                                                    |
+| -------------------------------------------- | ------ | ---------------------------------------------------------- |
+| `AIR_REVIEW_MODEL`                           | no     | shortcut for the reviewer model                            |
+| `AIR_REVIEW_MODEL_REVIEWER`                  | no     | reviewer role (model call 1)                               |
+| `AIR_REVIEW_MODEL_VERIFIER`                  | no     | verifier role (model call 2)                               |
+| `AIR_REVIEW_MODEL_PLANNER`                   | no     | planner role; reserved, the planner is deterministic today |
+| `AIR_REVIEW_MODEL_TRIAGE`                    | no     | triage role (complexity tier)                              |
+| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY` | no     | reviewer per complexity tier                               |
+| `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY` | no     | verifier per complexity tier                               |
+| `AIR_REVIEW_ROUTING_MODE`                    | no     | `deterministic`, `hybrid` (default) or `model`             |
 
 On Azure these are **deployment names**, not model ids.
 

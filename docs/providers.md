@@ -30,15 +30,15 @@ the job.
 The same knobs are available as environment variables, which is the intended
 way to parameterize a pipeline:
 
-| Variable                                               | Effect                                               |
-| ------------------------------------------------------ | ---------------------------------------------------- |
-| `AIR_REVIEW_PROVIDER`                                  | preset id (`azure-openai`, `bedrock`, `google`, ...) |
-| `AIR_REVIEW_BASE_URL`                                  | endpoint URL (overrides the preset)                  |
-| `AIR_REVIEW_API_KEY`                                   | API key value (simplest for repo secrets)            |
-| `AIR_REVIEW_API_KEY_ENV`                               | name of another env var holding the key              |
-| `AIR_REVIEW_MODEL_TRIAGE` / `_PLANNER` / `_REVIEWER` / `_VERIFIER` | one model per agent role                 |
-| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY`           | reviewer per complexity tier (see docs/foundry.md)   |
-| `AIR_REVIEW_MODEL`                                     | shortcut for the reviewer model                      |
+| Variable                                                           | Effect                                               |
+| ------------------------------------------------------------------ | ---------------------------------------------------- |
+| `AIR_REVIEW_PROVIDER`                                              | preset id (`azure-openai`, `bedrock`, `google`, ...) |
+| `AIR_REVIEW_BASE_URL`                                              | endpoint URL (overrides the preset)                  |
+| `AIR_REVIEW_API_KEY`                                               | API key value (simplest for repo secrets)            |
+| `AIR_REVIEW_API_KEY_ENV`                                           | name of another env var holding the key              |
+| `AIR_REVIEW_MODEL_TRIAGE` / `_PLANNER` / `_REVIEWER` / `_VERIFIER` | one model per agent role                             |
+| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY`                       | reviewer per complexity tier (see docs/foundry.md)   |
+| `AIR_REVIEW_MODEL`                                                 | shortcut for the reviewer model                      |
 
 ```bash
 export AIR_REVIEW_PROVIDER=azure-openai
@@ -129,9 +129,9 @@ provider's error message, including which env var holds the key.
 
 ## Two more presets
 
-| Preset id             | What it is |
-| --------------------- | ---------- |
-| `azure-foundry-agent` | Microsoft Foundry Agent Service: each role model is a **prompt agent name** in a Foundry project (`endpoint.baseUrl` = `https://<resource>.services.ai.azure.com/api/projects/<project>`, Entra ID bearer token). See [foundry.md](foundry.md). |
+| Preset id             | What it is                                                                                                                                                                                                                                                                             |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `azure-foundry-agent` | Microsoft Foundry Agent Service: each role model is a **prompt agent name** in a Foundry project (`endpoint.baseUrl` = `https://<resource>.services.ai.azure.com/api/projects/<project>`, Entra ID bearer token). See [foundry.md](foundry.md).                                        |
 | `mock`                | Offline, free and deterministic: no network. The reviewer emits findings only from `// air-review:expect SEVERITY category rule-id: title` markers in the diff, the verifier keeps everything, triage echoes the deterministic pre-assessment. For tests, demos and pipeline dry-runs. |
 
 Local model runtimes (Ollama and similar) are not supported: a cold start

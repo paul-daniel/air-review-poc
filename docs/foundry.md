@@ -5,10 +5,10 @@
 talks to it in two ways. Both are chosen by configuration only; the engine
 never references a vendor, a model or an agent by name in code.
 
-| Path | `provider` | What `models.*` names are | When to use |
-| ---- | ---------- | ------------------------- | ----------- |
-| A. Foundry Models, OpenAI v1 API | `azure-foundry` | **deployment names** | the default: one HTTPS call per role, works with every model sold through Foundry |
-| B. Foundry Agent Service, prompt agents | `azure-foundry-agent` | **agent names** | when the review roles must exist as governed agents in a Foundry project (tracing, versions, portal playground) |
+| Path                                    | `provider`            | What `models.*` names are | When to use                                                                                                     |
+| --------------------------------------- | --------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| A. Foundry Models, OpenAI v1 API        | `azure-foundry`       | **deployment names**      | the default: one HTTPS call per role, works with every model sold through Foundry                               |
+| B. Foundry Agent Service, prompt agents | `azure-foundry-agent` | **agent names**           | when the review roles must exist as governed agents in a Foundry project (tracing, versions, portal playground) |
 
 ## A. A deployed model behind the OpenAI v1 route
 
@@ -22,11 +22,11 @@ The same page states that the base URL accepts both
 
 Paste whichever endpoint the portal shows; air-review appends `/openai/v1`:
 
-| What the portal shows | Example |
-| --------------------- | ------- |
-| Azure OpenAI resource endpoint | `https://<resource>.openai.azure.com` |
-| Foundry resource endpoint | `https://<resource>.services.ai.azure.com` |
-| Foundry project endpoint | `https://<resource>.services.ai.azure.com/api/projects/<project>` |
+| What the portal shows          | Example                                                           |
+| ------------------------------ | ----------------------------------------------------------------- |
+| Azure OpenAI resource endpoint | `https://<resource>.openai.azure.com`                             |
+| Foundry resource endpoint      | `https://<resource>.services.ai.azure.com`                        |
+| Foundry project endpoint       | `https://<resource>.services.ai.azure.com/api/projects/<project>` |
 
 Authentication, per the same Microsoft page:
 
@@ -116,22 +116,22 @@ models:
 
 ## Interchangeable models: configuration and environment only
 
-| Config key | Environment variable | Meaning |
-| ---------- | -------------------- | ------- |
-| `provider` | `AIR_REVIEW_PROVIDER` | `azure-foundry`, `azure-foundry-agent`, `azure-openai`, `openai`, … , `mock` |
-| `endpoint.baseUrl` | `AIR_REVIEW_BASE_URL` | resource, project or agent-project endpoint |
-| `endpoint.apiKey` / `apiKeyEnv` | `AIR_REVIEW_API_KEY`, `AZURE_AI_API_KEY` | API key |
-| `endpoint.auth: bearer` + token | `AIR_REVIEW_ACCESS_TOKEN` | Entra ID token, sent as `Authorization: Bearer` |
-| `models.roles.triage` | `AIR_REVIEW_MODEL_TRIAGE` | complexity triage (cheap) |
-| `models.roles.planner` | `AIR_REVIEW_MODEL_PLANNER` | reserved; context planning is deterministic today |
-| `models.roles.reviewer` | `AIR_REVIEW_MODEL_REVIEWER` (or `AIR_REVIEW_MODEL`) | standard-tier reviewer |
-| `models.roles.verifier` | `AIR_REVIEW_MODEL_VERIFIER` | verifier (cheap to medium) |
-| `models.tiers.light.reviewer` | `AIR_REVIEW_MODEL_REVIEWER_LIGHT` | reviewer for light changes |
-| `models.tiers.light.verifier` | `AIR_REVIEW_MODEL_VERIFIER_LIGHT` | verifier for light changes |
-| `models.tiers.heavy.reviewer` | `AIR_REVIEW_MODEL_REVIEWER_HEAVY` | reviewer for heavy changes |
-| `models.tiers.heavy.verifier` | `AIR_REVIEW_MODEL_VERIFIER_HEAVY` | verifier for heavy changes |
-| `routing.mode` | `AIR_REVIEW_ROUTING_MODE` | `deterministic`, `hybrid` (default), `model` |
-| `telemetry.pricing` | `AIR_REVIEW_PRICING` (JSON) | USD per 1M tokens per deployment/agent |
+| Config key                      | Environment variable                                | Meaning                                                                      |
+| ------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `provider`                      | `AIR_REVIEW_PROVIDER`                               | `azure-foundry`, `azure-foundry-agent`, `azure-openai`, `openai`, … , `mock` |
+| `endpoint.baseUrl`              | `AIR_REVIEW_BASE_URL`                               | resource, project or agent-project endpoint                                  |
+| `endpoint.apiKey` / `apiKeyEnv` | `AIR_REVIEW_API_KEY`, `AZURE_AI_API_KEY`            | API key                                                                      |
+| `endpoint.auth: bearer` + token | `AIR_REVIEW_ACCESS_TOKEN`                           | Entra ID token, sent as `Authorization: Bearer`                              |
+| `models.roles.triage`           | `AIR_REVIEW_MODEL_TRIAGE`                           | complexity triage (cheap)                                                    |
+| `models.roles.planner`          | `AIR_REVIEW_MODEL_PLANNER`                          | reserved; context planning is deterministic today                            |
+| `models.roles.reviewer`         | `AIR_REVIEW_MODEL_REVIEWER` (or `AIR_REVIEW_MODEL`) | standard-tier reviewer                                                       |
+| `models.roles.verifier`         | `AIR_REVIEW_MODEL_VERIFIER`                         | verifier (cheap to medium)                                                   |
+| `models.tiers.light.reviewer`   | `AIR_REVIEW_MODEL_REVIEWER_LIGHT`                   | reviewer for light changes                                                   |
+| `models.tiers.light.verifier`   | `AIR_REVIEW_MODEL_VERIFIER_LIGHT`                   | verifier for light changes                                                   |
+| `models.tiers.heavy.reviewer`   | `AIR_REVIEW_MODEL_REVIEWER_HEAVY`                   | reviewer for heavy changes                                                   |
+| `models.tiers.heavy.verifier`   | `AIR_REVIEW_MODEL_VERIFIER_HEAVY`                   | verifier for heavy changes                                                   |
+| `routing.mode`                  | `AIR_REVIEW_ROUTING_MODE`                           | `deterministic`, `hybrid` (default), `model`                                 |
+| `telemetry.pricing`             | `AIR_REVIEW_PRICING` (JSON)                         | USD per 1M tokens per deployment/agent                                       |
 
 Unset roles fall back to `models.default`, then to the next cheaper role;
 unset tiers fall back to the standard role model. Routing therefore never
@@ -147,23 +147,23 @@ the essentials:
 ```yaml
 provider: azure-foundry
 endpoint:
-  baseUrl: https://my-resource.services.ai.azure.com   # /openai/v1 appended by the tool
-  apiKeyEnv: AZURE_AI_API_KEY                           # or AIR_REVIEW_ACCESS_TOKEN (Entra ID)
+  baseUrl: https://my-resource.services.ai.azure.com # /openai/v1 appended by the tool
+  apiKeyEnv: AZURE_AI_API_KEY # or AIR_REVIEW_ACCESS_TOKEN (Entra ID)
 models:
   default: gpt-5-mini
   roles:
-    triage: gpt-5-mini        # decides the tier
-    reviewer: gpt-5           # standard tier
-    verifier: gpt-5-mini      # checks findings against the code
+    triage: gpt-5-mini # decides the tier
+    reviewer: gpt-5 # standard tier
+    verifier: gpt-5-mini # checks findings against the code
   tiers:
-    light: { reviewer: gpt-5-mini }      # translation file, small helper, tests only
-    heavy: { reviewer: gpt-5-codex }     # large or cross-module pull requests
+    light: { reviewer: gpt-5-mini } # translation file, small helper, tests only
+    heavy: { reviewer: gpt-5-codex } # large or cross-module pull requests
 routing:
-  mode: hybrid                                        # thresholds, then the triage model for the middle band
+  mode: hybrid # thresholds, then the triage model for the middle band
   light: { maxFiles: 3, maxLines: 150 }
   heavy: { minFiles: 10, minLines: 400, minModules: 3 }
 telemetry:
-  pricing:                                            # USD per 1M tokens, keyed by deployment name
+  pricing: # USD per 1M tokens, keyed by deployment name
     gpt-5: { input: 1.25, cachedInput: 0.125, output: 10 }
     gpt-5-mini: { input: 0.25, cachedInput: 0.025, output: 2 }
     gpt-5-codex: { input: 1.25, cachedInput: 0.125, output: 10 }

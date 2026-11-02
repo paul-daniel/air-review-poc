@@ -15,25 +15,25 @@ overrides apply on top of the file and work even when no file exists.
 `air-review config set/unset` preserves comments in YAML. TOML files are
 rewritten by the TOML serializer, so comments in TOML configs are not kept.
 
-| Environment variable | Effect |
-| -------------------- | ------ |
-| `AIR_REVIEW_CONFIG` | config file path |
-| `AIR_REVIEW_PROVIDER` | provider preset (`azure-foundry`, `azure-foundry-agent`, `azure-openai`, `openai`, `bedrock`, `google`, …, `mock`) |
-| `AIR_REVIEW_BASE_URL` | endpoint URL (overrides the preset) |
-| `AIR_REVIEW_API_KEY` | API key value (simplest for repo secrets) |
-| `AIR_REVIEW_API_KEY_ENV` | name of another env var holding the key |
-| `AIR_REVIEW_ACCESS_TOKEN` | short-lived OAuth / Microsoft Entra ID token, sent as `Authorization: Bearer` |
-| `AIR_REVIEW_AUTH` | `api-key` (preset header) or `bearer` (force `Authorization: Bearer`) |
-| `AIR_REVIEW_API` | `auto` (default), `chat-completions` or `responses` wire protocol |
-| `AIR_REVIEW_MAX_TOKENS_PARAMETER` | `max_tokens` or `max_completion_tokens` |
-| `AIR_REVIEW_MODEL` | reviewer model (shortcut) |
-| `AIR_REVIEW_MODEL_TRIAGE` / `_PLANNER` / `_REVIEWER` / `_VERIFIER` | per-role models |
-| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY` | reviewer per complexity tier |
-| `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY` | verifier per complexity tier |
-| `AIR_REVIEW_ROUTING_MODE` | `deterministic`, `hybrid` or `model` |
-| `AIR_REVIEW_PRICING` | the whole `telemetry.pricing` table as JSON |
-| `GITHUB_TOKEN` | token for the GitHub adapter |
-| `SYSTEM_ACCESSTOKEN` | token for the Azure DevOps adapter (`$(System.AccessToken)` or a PAT) |
+| Environment variable                                               | Effect                                                                                                             |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `AIR_REVIEW_CONFIG`                                                | config file path                                                                                                   |
+| `AIR_REVIEW_PROVIDER`                                              | provider preset (`azure-foundry`, `azure-foundry-agent`, `azure-openai`, `openai`, `bedrock`, `google`, …, `mock`) |
+| `AIR_REVIEW_BASE_URL`                                              | endpoint URL (overrides the preset)                                                                                |
+| `AIR_REVIEW_API_KEY`                                               | API key value (simplest for repo secrets)                                                                          |
+| `AIR_REVIEW_API_KEY_ENV`                                           | name of another env var holding the key                                                                            |
+| `AIR_REVIEW_ACCESS_TOKEN`                                          | short-lived OAuth / Microsoft Entra ID token, sent as `Authorization: Bearer`                                      |
+| `AIR_REVIEW_AUTH`                                                  | `api-key` (preset header) or `bearer` (force `Authorization: Bearer`)                                              |
+| `AIR_REVIEW_API`                                                   | `auto` (default), `chat-completions` or `responses` wire protocol                                                  |
+| `AIR_REVIEW_MAX_TOKENS_PARAMETER`                                  | `max_tokens` or `max_completion_tokens`                                                                            |
+| `AIR_REVIEW_MODEL`                                                 | reviewer model (shortcut)                                                                                          |
+| `AIR_REVIEW_MODEL_TRIAGE` / `_PLANNER` / `_REVIEWER` / `_VERIFIER` | per-role models                                                                                                    |
+| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY`                       | reviewer per complexity tier                                                                                       |
+| `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY`                       | verifier per complexity tier                                                                                       |
+| `AIR_REVIEW_ROUTING_MODE`                                          | `deterministic`, `hybrid` or `model`                                                                               |
+| `AIR_REVIEW_PRICING`                                               | the whole `telemetry.pricing` table as JSON                                                                        |
+| `GITHUB_TOKEN`                                                     | token for the GitHub adapter                                                                                       |
+| `SYSTEM_ACCESSTOKEN`                                               | token for the Azure DevOps adapter (`$(System.AccessToken)` or a PAT)                                              |
 
 ## Sections
 

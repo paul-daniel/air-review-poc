@@ -85,18 +85,18 @@ the cost of each step and the workflow actually executed.
 
 Two verified paths, both configured without touching code:
 
-| `provider`            | What a role model is                 | Endpoint                                                       |
-| --------------------- | ------------------------------------ | -------------------------------------------------------------- |
-| `azure-foundry`       | a **deployment name** (OpenAI v1 API) | `https://<resource>.services.ai.azure.com` (or `.openai.azure.com`) |
-| `azure-foundry-agent` | a **prompt agent name** (Agent Service) | `https://<resource>.services.ai.azure.com/api/projects/<project>` |
+| `provider`            | What a role model is                    | Endpoint                                                            |
+| --------------------- | --------------------------------------- | ------------------------------------------------------------------- |
+| `azure-foundry`       | a **deployment name** (OpenAI v1 API)   | `https://<resource>.services.ai.azure.com` (or `.openai.azure.com`) |
+| `azure-foundry-agent` | a **prompt agent name** (Agent Service) | `https://<resource>.services.ai.azure.com/api/projects/<project>`   |
 
 ```yaml
 provider: azure-foundry
 models:
   roles: { triage: gpt-5-mini, reviewer: gpt-5, verifier: gpt-5-mini }
   tiers:
-    light: { reviewer: gpt-5-mini }   # one translation file, a small helper
-    heavy: { reviewer: gpt-5-codex }  # large, cross-module pull requests
+    light: { reviewer: gpt-5-mini } # one translation file, a small helper
+    heavy: { reviewer: gpt-5-codex } # large, cross-module pull requests
 ```
 
 Environment variables (`AIR_REVIEW_MODEL_REVIEWER`, `AIR_REVIEW_MODEL_REVIEWER_LIGHT`,
@@ -127,39 +127,39 @@ tokens per deployment). Guide: [docs/observability.md](docs/observability.md).
 
 ## Commands
 
-| Command                                                | What it does                                                   |
-| ------------------------------------------------------ | -------------------------------------------------------------- |
-| `air-review init`                                      | write a provider-ready, commented config                       |
-| `air-review doctor`                                    | check config, credential, endpoint, deployments, git and SCM   |
-| `air-review example`                                   | copy-paste snippets (providers, CI, config, local)             |
-| `air-review inspect`                                   | what the tool sees: delta, structural facts, context plan      |
-| `air-review dry-run`                                   | full review, nothing published                                 |
-| `air-review review [--publish] [--tier light\|standard\|heavy]` | review, publish, vote                                  |
-| `air-review explain [id]`                              | stored findings, or one finding with its evidence              |
-| `air-review models`                                    | what the endpoint offers and which role uses it                |
-| `air-review telemetry`                                 | recent runs: tier, tokens, cost, duration, verdict             |
-| `air-review cache stats` / `prune`                     | inspect or clean the local result cache                        |
-| `air-review config get` / `set` / `unset` / `list`     | read or edit the config                                        |
+| Command                                                         | What it does                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------ |
+| `air-review init`                                               | write a provider-ready, commented config                     |
+| `air-review doctor`                                             | check config, credential, endpoint, deployments, git and SCM |
+| `air-review example`                                            | copy-paste snippets (providers, CI, config, local)           |
+| `air-review inspect`                                            | what the tool sees: delta, structural facts, context plan    |
+| `air-review dry-run`                                            | full review, nothing published                               |
+| `air-review review [--publish] [--tier light\|standard\|heavy]` | review, publish, vote                                        |
+| `air-review explain [id]`                                       | stored findings, or one finding with its evidence            |
+| `air-review models`                                             | what the endpoint offers and which role uses it              |
+| `air-review telemetry`                                          | recent runs: tier, tokens, cost, duration, verdict           |
+| `air-review cache stats` / `prune`                              | inspect or clean the local result cache                      |
+| `air-review config get` / `set` / `unset` / `list`              | read or edit the config                                      |
 
 Exit codes: `0` gate passed · `10` gate failed · `20` config · `30` model/provider · `40` SCM · `50` internal.
 Reference: [docs/commands.md](docs/commands.md).
 
 ## Documentation
 
-| Document                                             | Contents                                                              |
-| ---------------------------------------------------- | --------------------------------------------------------------------- |
-| [docs/architecture.md](docs/architecture.md)         | pipeline, roles, routing, finding lifecycle, memory model             |
-| [docs/foundry.md](docs/foundry.md)                   | Microsoft Foundry: deployments, prompt agents, interchangeable models |
-| [docs/azure-devops.md](docs/azure-devops.md)         | Azure Pipelines / Azure Repos: pipeline, permissions, vote, status    |
-| [docs/review-format.md](docs/review-format.md)       | how the main AI reviewers format feedback, and what we chose          |
-| [docs/observability.md](docs/observability.md)       | run reports, cost per step, workflow diagram, telemetry               |
-| [docs/configuration.md](docs/configuration.md)       | every option with its default                                         |
-| [docs/providers.md](docs/providers.md)               | vendor presets and endpoint recipes                                   |
-| [docs/commands.md](docs/commands.md)                 | every command with examples                                           |
-| [docs/github-ci.md](docs/github-ci.md)               | GitHub Actions setup                                                  |
-| [docs/security.md](docs/security.md)                 | prompt-injection boundary, redaction, tokens                          |
-| [docs/troubleshooting.md](docs/troubleshooting.md)   | exit codes and common errors                                          |
-| [RAPPORT.md](RAPPORT.md)                             | what was done, decisions taken, what remains (French)                 |
+| Document                                           | Contents                                                              |
+| -------------------------------------------------- | --------------------------------------------------------------------- |
+| [docs/architecture.md](docs/architecture.md)       | pipeline, roles, routing, finding lifecycle, memory model             |
+| [docs/foundry.md](docs/foundry.md)                 | Microsoft Foundry: deployments, prompt agents, interchangeable models |
+| [docs/azure-devops.md](docs/azure-devops.md)       | Azure Pipelines / Azure Repos: pipeline, permissions, vote, status    |
+| [docs/review-format.md](docs/review-format.md)     | how the main AI reviewers format feedback, and what we chose          |
+| [docs/observability.md](docs/observability.md)     | run reports, cost per step, workflow diagram, telemetry               |
+| [docs/configuration.md](docs/configuration.md)     | every option with its default                                         |
+| [docs/providers.md](docs/providers.md)             | vendor presets and endpoint recipes                                   |
+| [docs/commands.md](docs/commands.md)               | every command with examples                                           |
+| [docs/github-ci.md](docs/github-ci.md)             | GitHub Actions setup                                                  |
+| [docs/security.md](docs/security.md)               | prompt-injection boundary, redaction, tokens                          |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | exit codes and common errors                                          |
+| [RAPPORT.md](RAPPORT.md)                           | what was done, decisions taken, what remains (French)                 |
 
 Test bed with ready-made pull-request scenarios (translation-only, small
 classification helper, large multi-module feature, docs-only re-push, clean

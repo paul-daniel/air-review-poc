@@ -13,12 +13,12 @@ PR delta (incremental) → structural analysis → deterministic rules
 Four logical roles, each one model call at most, each with its own
 configurable model (or Foundry agent):
 
-| Role | Job | Model call? | Typical model |
-| ---- | --- | ----------- | ------------- |
-| Triage (`models.roles.triage`) | measure the change and decide the complexity tier | only in `routing.mode: model`, or in `hybrid` for the ambiguous middle band | cheap/fast |
-| Context Planner (`models.roles.planner`) | decide which existing files the reviewer must see | **no** — deterministic exemplar selection; the model slot is reserved | cheap (reserved) |
-| Review Analyst (`models.roles.reviewer`, overridden per tier by `models.tiers.*`) | reason about the change with the evidence bundle | **yes** — unless nothing new is reviewable | light: cheap · standard/heavy: strong code model |
-| Verifier (`models.roles.verifier`, per tier too) | check each finding against the quoted head-revision code, drop unproven or duplicate ones, recalibrate | **yes** — when there is at least one candidate | cheap to medium |
+| Role                                                                              | Job                                                                                                    | Model call?                                                                 | Typical model                                    |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- | ------------------------------------------------ |
+| Triage (`models.roles.triage`)                                                    | measure the change and decide the complexity tier                                                      | only in `routing.mode: model`, or in `hybrid` for the ambiguous middle band | cheap/fast                                       |
+| Context Planner (`models.roles.planner`)                                          | decide which existing files the reviewer must see                                                      | **no** — deterministic exemplar selection; the model slot is reserved       | cheap (reserved)                                 |
+| Review Analyst (`models.roles.reviewer`, overridden per tier by `models.tiers.*`) | reason about the change with the evidence bundle                                                       | **yes** — unless nothing new is reviewable                                  | light: cheap · standard/heavy: strong code model |
+| Verifier (`models.roles.verifier`, per tier too)                                  | check each finding against the quoted head-revision code, drop unproven or duplicate ones, recalibrate | **yes** — when there is at least one candidate                              | cheap to medium                                  |
 
 A typical run makes two or three model calls; zero on a re-queued build of an
 already reviewed head, zero on a docs-only push, zero with
@@ -34,12 +34,12 @@ ledger, the cache, the trace and the reports.
 `src/review/triage.ts` measures the delta that is worth a model's attention
 (files whose kind is not in `review.modelSkipKinds`):
 
-| Signal | Example |
-| ------ | ------- |
-| files, added and removed lines | `19 files, +812/−40` |
-| top-level modules touched | `apps/web`, `apps/api`, `libs/shared` (workspace roots are expanded one level) |
-| file kinds | `translation` (i18n folders), `docs`, `data`, `config`, `tests`, `code`, `binary` |
-| non-code only, tests only, largest single-file change, API-surface files (`index`, `routes`, `schema`...) | |
+| Signal                                                                                                    | Example                                                                           |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| files, added and removed lines                                                                            | `19 files, +812/−40`                                                              |
+| top-level modules touched                                                                                 | `apps/web`, `apps/api`, `libs/shared` (workspace roots are expanded one level)    |
+| file kinds                                                                                                | `translation` (i18n folders), `docs`, `data`, `config`, `tests`, `code`, `binary` |
+| non-code only, tests only, largest single-file change, API-surface files (`index`, `routes`, `schema`...) |                                                                                   |
 
 Deterministic decision (`routing.light` / `routing.heavy` thresholds):
 
@@ -47,7 +47,7 @@ Deterministic decision (`routing.light` / `routing.heavy` thresholds):
 2. no source code changed (translation, data, docs or config only) → **light**;
 3. any heavy threshold hit (files ≥ 10, lines ≥ 400, modules ≥ 3) → **heavy**;
 4. within the light limits (≤ 3 files, ≤ 150 lines, one module) → **light**;
-5. otherwise **standard**, flagged *ambiguous*.
+5. otherwise **standard**, flagged _ambiguous_.
 
 In `hybrid` mode (default) the triage model is consulted only for case 5 and
 sees the deterministic pre-assessment plus a compact, redacted view of the
@@ -86,13 +86,13 @@ with the reason for each pick.
 Every finding states where its rule comes from, what kind of problem it is,
 how bad, how sure, and where the fix belongs:
 
-| Field | Values |
-| ----- | ------ |
+| Field      | Values                                                                                                                                                                           |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ruleOrigin | `PROJECT_CONFIG` (very strong, checked deterministically when possible), `FRAMEWORK` (strong), `REPO_CONVENTION` (needs several precedents), `HEURISTIC` (weak, rarely blocking) |
-| category | `correctness`, `security`, `performance`, `maintainability`, `consistency`, `tests`, `docs` |
-| severity | `BLOCKER`, `CRITICAL`, `MAJOR`, `MINOR`, `INFO` |
-| confidence | `0..1`, independent of severity |
-| scope | `IN_PR` (fix here; the only scope that can fail the gate), `FOLLOW_UP` (separate task, including findings on unchanged code the change interacts with), `REPO_WIDE` (systemic) |
+| category   | `correctness`, `security`, `performance`, `maintainability`, `consistency`, `tests`, `docs`                                                                                      |
+| severity   | `BLOCKER`, `CRITICAL`, `MAJOR`, `MINOR`, `INFO`                                                                                                                                  |
+| confidence | `0..1`, independent of severity                                                                                                                                                  |
+| scope      | `IN_PR` (fix here; the only scope that can fail the gate), `FOLLOW_UP` (separate task, including findings on unchanged code the change interacts with), `REPO_WIDE` (systemic)   |
 
 Existing repository debt is detected but never imitated: a PR that reproduces
 a known-bad pattern gets an `IN_PR` finding for the new occurrence, not a

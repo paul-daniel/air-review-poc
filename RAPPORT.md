@@ -8,17 +8,17 @@ tout a été repackagé dedans et poussé :
 
 ## 1. Résumé
 
-| Sujet | État |
-|---|---|
-| Base de code retenue | `~/Documents/ChatGPT/AirReview2` (TypeScript, la version la plus avancée : adaptateur Azure DevOps avec vote, ledger PR, vérifieur). Les dossiers Python `AirReviewer*` et le dépôt GitHub `airreview` (juin 2026) sont l'ancienne génération et n'ont pas été repris. |
-| Routage par complexité | Fait : rôle **triage** + tiers `light` / `standard` / `heavy`, décision justifiée dans la sortie terminal, le commentaire de synthèse, le rapport et le JSON. |
-| Intégration Foundry (new) | Fait et **validé en réel** sur `airreview-resource` (route OpenAI v1 + jeton Entra ID). Provider `azure-foundry-agent` (prompt agents du Foundry Agent Service) implémenté d'après la doc officielle, **non testé en réel** (aucun projet Foundry avec agents n'existe encore). |
-| Format de la revue | Fait : étude CodeRabbit / Qodo-PR-Agent / Copilot, format choisi et justifié dans `docs/review-format.md`. |
-| Observabilité | Fait : trace par étape (durée, agent/modèle, tokens, coût), rapport `.air-review/reports/<run>.md|json`, diagramme Mermaid du chemin réellement emprunté. |
+| Sujet                        | État                                                                                                                                                                                                                                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Base de code retenue         | `~/Documents/ChatGPT/AirReview2` (TypeScript, la version la plus avancée : adaptateur Azure DevOps avec vote, ledger PR, vérifieur). Les dossiers Python `AirReviewer*` et le dépôt GitHub `airreview` (juin 2026) sont l'ancienne génération et n'ont pas été repris.           |
+| Routage par complexité       | Fait : rôle **triage** + tiers `light` / `standard` / `heavy`, décision justifiée dans la sortie terminal, le commentaire de synthèse, le rapport et le JSON.                                                                                                                    |
+| Intégration Foundry (new)    | Fait et **validé en réel** sur `airreview-resource` (route OpenAI v1 + jeton Entra ID). Provider `azure-foundry-agent` (prompt agents du Foundry Agent Service) implémenté d'après la doc officielle, **non testé en réel** (aucun projet Foundry avec agents n'existe encore).  |
+| Format de la revue           | Fait : étude CodeRabbit / Qodo-PR-Agent / Copilot, format choisi et justifié dans `docs/review-format.md`.                                                                                                                                                                       |
+| Observabilité                | Fait : trace par étape (durée, agent/modèle, tokens, coût), rapport `.air-review/reports/<run>.md                                                                                                                                                                                | json`, diagramme Mermaid du chemin réellement emprunté. |
 | Azure DevOps (vrai reviewer) | Fait dans le code et couvert par des tests unitaires (vote 10 / 5 / -5 selon le verdict, statut PR optionnel, dédoublonnage des fils par marqueur, revue incrémentale, cache). **Pas de run en réel** (voir §5). Pipeline YAML prêt à l'emploi : `examples/azure-pipelines.yml`. |
-| Dépôt de test | Fait : monorepo Angular + API Node + lib partagée, six branches de scénario documentées (`scenarios/`). |
-| Documentation | README, `docs/foundry.md`, `docs/review-format.md`, `docs/observability.md`, `docs/azure-devops.md`, `docs/architecture.md`, `docs/configuration.md`, sources citées. |
-| Tests | 32 fichiers, 229 tests unitaires verts (`npm test`), smoke test de bout en bout hors ligne vert (`npm run test:e2e`), lint et typage verts. |
+| Dépôt de test                | Fait : monorepo Angular + API Node + lib partagée, six branches de scénario documentées (`scenarios/`).                                                                                                                                                                          |
+| Documentation                | README, `docs/foundry.md`, `docs/review-format.md`, `docs/observability.md`, `docs/azure-devops.md`, `docs/architecture.md`, `docs/configuration.md`, sources citées.                                                                                                            |
+| Tests                        | 32 fichiers, 229 tests unitaires verts (`npm test`), smoke test de bout en bout hors ligne vert (`npm run test:e2e`), lint et typage verts.                                                                                                                                      |
 
 ## 2. Ce qui a été fait, point par point
 
@@ -41,7 +41,7 @@ armée d'agents non, tout ce qui peut être déterministe reste déterministe) :
   ou aucun code source (traduction/docs/données) ; `heavy` ≥ 10 fichiers ou
   ≥ 400 lignes ou ≥ 3 modules ; `standard` sinon.
 - **Modèle de triage** consulté uniquement sur la bande ambiguë (`routing.mode:
-  hybrid`, défaut), jamais (`deterministic`) ou toujours (`model`).
+hybrid`, défaut), jamais (`deterministic`) ou toujours (`model`).
 - **Le choix est visible** : section « Routing » du terminal, du commentaire de
   synthèse et du rapport (tier, modèle reviewer/verifier, méthode, raisons) ;
   `air-review inspect` l'anticipe avant tout appel ; `--tier` force un tier.
@@ -59,7 +59,7 @@ Deux chemins, vérifiés dans la documentation Microsoft (liens dans `docs/found
    `model`, pas d'`api-version`, clé `api-key` ou jeton Entra ID de scope
    `https://ai.azure.com/.default`, bascule automatique vers l'API Responses).
    **Validé en réel** (voir §4).
-2. `provider: azure-foundry-agent` : un *prompt agent* Foundry par rôle,
+2. `provider: azure-foundry-agent` : un _prompt agent_ Foundry par rôle,
    appelé via `POST {projet}/agents/{nom}/endpoint/protocols/openai/responses?api-version=v1`.
    Le script `scripts/foundry/sync-agents.mjs` crée/met à jour les cinq agents
    à partir des prompts de l'outil. Changer le modèle d'un rôle devient une
@@ -131,14 +131,14 @@ Voir le README et `scenarios/README.md` du dépôt. Monorepo `atlas-shop` :
 i18n en/fr/de), `apps/api` (Node 22 + TypeScript, couches contrôleur/service/
 dépôt), `libs/shared` (modèles, monnaie, remises). Six branches de scénario :
 
-| Branche | Attendu |
-|---|---|
-| `scenario/01-translation-only` | tier light, aucun finding, approbation |
-| `scenario/02-classification-task` | tier light, approbation |
-| `scenario/03-order-returns-feature` | tier heavy (≥ 18 fichiers, 3 modules), approbation attendue |
-| `scenario/04-repush-docs-only` | second push sur la PR 03 : « rien de nouveau », 0 appel modèle, pas de doublon |
-| `scenario/05-clean-small-refactor` | aucun finding → approbation automatique |
-| `scenario/06-defects` | secret (BLOCKER, déterministe), fuite d'abonnement (MAJOR, déterministe), composant hors convention (MAJOR), bug pourcentage/fraction (modèle), injection de prompt ignorée → « en attente de l'auteur », exit 10 |
+| Branche                             | Attendu                                                                                                                                                                                                           |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scenario/01-translation-only`      | tier light, aucun finding, approbation                                                                                                                                                                            |
+| `scenario/02-classification-task`   | tier light, approbation                                                                                                                                                                                           |
+| `scenario/03-order-returns-feature` | tier heavy (≥ 18 fichiers, 3 modules), approbation attendue                                                                                                                                                       |
+| `scenario/04-repush-docs-only`      | second push sur la PR 03 : « rien de nouveau », 0 appel modèle, pas de doublon                                                                                                                                    |
+| `scenario/05-clean-small-refactor`  | aucun finding → approbation automatique                                                                                                                                                                           |
+| `scenario/06-defects`               | secret (BLOCKER, déterministe), fuite d'abonnement (MAJOR, déterministe), composant hors convention (MAJOR), bug pourcentage/fraction (modèle), injection de prompt ignorée → « en attente de l'auteur », exit 10 |
 
 Les scénarios sont exécutables hors ligne (`provider: mock`, script
 `scripts/review-scenarios.sh`) et en réel sur Foundry.
@@ -183,15 +183,15 @@ pour ce rapport.
   démonstration `scripts/demo.mjs` (3 fichiers : fuite d'abonnement, bug de
   remise, injection de prompt) :
 
-| Run | Tier / reviewer | Appels | Durée | Coût estimé | Résultat |
-|---|---|---|---|---|---|
-| `dry-run` | light / `airreview-planning-mini` (gpt-4.1-mini) | 2 | 5,2 s | ~0,002 $ | fuite d'abonnement (déterministe) + 1 finding modèle, injection ignorée, approuvé avec suggestions |
-| `dry-run --tier heavy --force` | heavy / `airreview-review-codex` (gpt-5-codex) | 2 | 14,1 s | ~0,016 $ | bug « pourcentage traité comme fraction » trouvé (MAJOR), doublon du modèle supprimé par le vérifieur déterministe |
+| Run                            | Tier / reviewer                                  | Appels | Durée  | Coût estimé | Résultat                                                                                                           |
+| ------------------------------ | ------------------------------------------------ | ------ | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------ |
+| `dry-run`                      | light / `airreview-planning-mini` (gpt-4.1-mini) | 2      | 5,2 s  | ~0,002 $    | fuite d'abonnement (déterministe) + 1 finding modèle, injection ignorée, approuvé avec suggestions                 |
+| `dry-run --tier heavy --force` | heavy / `airreview-review-codex` (gpt-5-codex)   | 2      | 14,1 s | ~0,016 $    | bug « pourcentage traité comme fraction » trouvé (MAJOR), doublon du modèle supprimé par le vérifieur déterministe |
 
-  Le rapport `.air-review/reports/<run>.md` et le diagramme ont été relus.
-  Un défaut trouvé grâce à ce run : la sonde de `doctor` déclarait un
-  déploiement à raisonnement (gpt-5-codex) en échec (budget de 16 tokens
-  épuisé en raisonnement) — corrigé.
+Le rapport `.air-review/reports/<run>.md` et le diagramme ont été relus.
+Un défaut trouvé grâce à ce run : la sonde de `doctor` déclarait un
+déploiement à raisonnement (gpt-5-codex) en échec (budget de 16 tokens
+épuisé en raisonnement) — corrigé.
 
 ## 5. Ce qui n'a pas pu être fait ou vérifié
 
