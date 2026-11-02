@@ -16,7 +16,6 @@ Secrets are marked **yes**: store them in a CI secret store or a git-ignored `.e
 | `AIR_REVIEW_AUTH`                 | no      | `api-key` or `bearer`                                                                                                                                                 |
 | `AIR_REVIEW_API`                  | no      | `auto` (default), `chat-completions` or `responses`                                                                                                                   |
 | `AIR_REVIEW_MAX_TOKENS_PARAMETER` | no      | `max_tokens` or `max_completion_tokens` (Azure defaults to the latter)                                                                                                |
-| `AIR_REVIEW_OPENAI_BASE_URL`      | no      | legacy alias for `AIR_REVIEW_BASE_URL`; still read                                                                                                                    |
 
 ### Preset key variables
 
@@ -44,6 +43,10 @@ Each preset reads its own variable when `AIR_REVIEW_API_KEY` and `AIR_REVIEW_API
 | `AIR_REVIEW_MODEL_REVIEWER` | no     | reviewer role (model call 1)                               |
 | `AIR_REVIEW_MODEL_VERIFIER` | no     | verifier role (model call 2)                               |
 | `AIR_REVIEW_MODEL_PLANNER`  | no     | planner role; reserved, the planner is deterministic today |
+| `AIR_REVIEW_MODEL_TRIAGE`   | no     | triage role (complexity tier)                              |
+| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY` | no | reviewer per complexity tier                    |
+| `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY` | no | verifier per complexity tier                    |
+| `AIR_REVIEW_ROUTING_MODE`   | no     | `deterministic`, `hybrid` (default) or `model`             |
 
 On Azure these are **deployment names**, not model ids.
 
@@ -99,13 +102,6 @@ Only set the agent variables by hand to simulate a pipeline locally; `--ci azure
 | `AIR_REVIEW_PRICING` | no     | pricing table as JSON, USD per million tokens, keyed by model or deployment name; overrides `telemetry.pricing` |
 
 Example: `{"gpt-4.1":{"input":2,"cachedInput":0.5,"output":8}}`. Telemetry is local only; nothing is ever uploaded.
-
-## Internal and reserved
-
-| Variable         | Secret  | Meaning                                                                               |
-| ---------------- | ------- | ------------------------------------------------------------------------------------- |
-| `OLLAMA_HOST`    | no      | local model runtime, only behind `features.ollama` (disabled); used by the e2e script |
-| `OLLAMA_API_KEY` | **yes** | same                                                                                  |
 
 ## Bitbucket and GitLab (read by your pipeline, not by the tool)
 

@@ -2,7 +2,9 @@
 
 Every option has a default, so a minimal config can be almost empty. The
 authoritative machine-readable schema is
-[schema/air-review.schema.json](../schema/air-review.schema.json).
+[schema/air-review.schema.json](../schema/air-review.schema.json). A complete
+commented example for Microsoft Foundry + Azure DevOps is
+[examples/air-review.foundry.yaml](../examples/air-review.foundry.yaml).
 
 ## File discovery
 
@@ -13,21 +15,25 @@ overrides apply on top of the file and work even when no file exists.
 `air-review config set/unset` preserves comments in YAML. TOML files are
 rewritten by the TOML serializer, so comments in TOML configs are not kept.
 
-| Environment variable                                   | Effect                                                                        |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| `AIR_REVIEW_CONFIG`                                    | config file path                                                              |
-| `AIR_REVIEW_PROVIDER`                                  | provider preset (`openai`, `azure-openai`, `bedrock`, `google`, ...)          |
-| `AIR_REVIEW_BASE_URL`                                  | endpoint URL (overrides the preset)                                           |
-| `AIR_REVIEW_API_KEY`                                   | API key value (simplest for repo secrets)                                     |
-| `AIR_REVIEW_API_KEY_ENV`                               | name of another env var holding the key                                       |
-| `AIR_REVIEW_ACCESS_TOKEN`                              | short-lived OAuth / Microsoft Entra ID token, sent as `Authorization: Bearer` |
-| `AIR_REVIEW_AUTH`                                      | `api-key` (preset header) or `bearer` (force `Authorization: Bearer`)         |
-| `AIR_REVIEW_API`                                       | `auto` (default), `chat-completions` or `responses` wire protocol             |
-| `AIR_REVIEW_MODEL`                                     | reviewer model                                                                |
-| `AIR_REVIEW_MODEL_PLANNER` / `_REVIEWER` / `_VERIFIER` | per-role models                                                               |
-| `AIR_REVIEW_OPENAI_BASE_URL`                           | legacy alias for `AIR_REVIEW_BASE_URL`                                        |
-| `GITHUB_TOKEN`                                         | token for the GitHub adapter                                                  |
-| `SYSTEM_ACCESSTOKEN`                                   | token for the Azure DevOps adapter (`$(System.AccessToken)` or a PAT)         |
+| Environment variable | Effect |
+| -------------------- | ------ |
+| `AIR_REVIEW_CONFIG` | config file path |
+| `AIR_REVIEW_PROVIDER` | provider preset (`azure-foundry`, `azure-foundry-agent`, `azure-openai`, `openai`, `bedrock`, `google`, …, `mock`) |
+| `AIR_REVIEW_BASE_URL` | endpoint URL (overrides the preset) |
+| `AIR_REVIEW_API_KEY` | API key value (simplest for repo secrets) |
+| `AIR_REVIEW_API_KEY_ENV` | name of another env var holding the key |
+| `AIR_REVIEW_ACCESS_TOKEN` | short-lived OAuth / Microsoft Entra ID token, sent as `Authorization: Bearer` |
+| `AIR_REVIEW_AUTH` | `api-key` (preset header) or `bearer` (force `Authorization: Bearer`) |
+| `AIR_REVIEW_API` | `auto` (default), `chat-completions` or `responses` wire protocol |
+| `AIR_REVIEW_MAX_TOKENS_PARAMETER` | `max_tokens` or `max_completion_tokens` |
+| `AIR_REVIEW_MODEL` | reviewer model (shortcut) |
+| `AIR_REVIEW_MODEL_TRIAGE` / `_PLANNER` / `_REVIEWER` / `_VERIFIER` | per-role models |
+| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY` | reviewer per complexity tier |
+| `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY` | verifier per complexity tier |
+| `AIR_REVIEW_ROUTING_MODE` | `deterministic`, `hybrid` or `model` |
+| `AIR_REVIEW_PRICING` | the whole `telemetry.pricing` table as JSON |
+| `GITHUB_TOKEN` | token for the GitHub adapter |
+| `SYSTEM_ACCESSTOKEN` | token for the Azure DevOps adapter (`$(System.AccessToken)` or a PAT) |
 
 ## Sections
 
@@ -37,22 +43,54 @@ rewritten by the TOML serializer, so comments in TOML configs are not kept.
 frameworks: [angular]
 ```
 
-Context packs to enable. The MVP ships `angular`.
+Context packs to enable. The MVP ships `angular`; the exemplar planner and the
+repository profile are language-agnostic and always on.
 
 ### provider / models
 
 ```yaml
-provider: openai # preset id; see providers.md for the full list
+provider: azure-foundry # preset id; see providers.md for the full list
 models:
-  default: gpt-4o-mini # fallback for every role
+  default: gpt-5-mini # fallback for every role
   roles:
-    planner: gpt-4o-mini # context planning / selection
-    reviewer: gpt-4.1 # strong reasoning pass
-    verifier: gpt-4o-mini # verify + calibrate before publish
+    triage: gpt-5-mini # decides the complexity tier (cheap)
+    planner: gpt-5-mini # reserved: context planning is deterministic today
+    reviewer: gpt-5 # standard tier: the strong reasoning pass
+    verifier: gpt-5-mini # verify + calibrate before publish
+  tiers: # override reviewer/verifier once triage has picked a tier
+    light: { reviewer: gpt-5-mini, verifier: gpt-5-mini }
+    heavy: { reviewer: gpt-5-codex }
 ```
 
-Roles, not models, are what the engine consumes. If `planner` is unset it
-falls back to `reviewer`, then `default`.
+Roles, not models, are what the engine consumes. Fallbacks: `reviewer` ←
+`default`; `planner` ← `default` ← `reviewer`; `verifier` ← `planner` ←
+`default` ← `reviewer`; `triage` ← `planner` ← `verifier` ← `default` ←
+`reviewer`. A tier without a model uses the standard role model. On Azure a
+value is a **deployment name**; with `azure-foundry-agent` it is an **agent
+name**; with `mock` any string.
+
+### routing
+
+```yaml
+routing:
+  enabled: true
+  mode: hybrid # deterministic | hybrid | model
+  light:
+    maxFiles: 3 # ≤ files AND ≤ lines AND one module → light
+    maxLines: 150
+  heavy:
+    minFiles: 10 # any of these → heavy
+    minLines: 400
+    minModules: 3
+```
+
+Counts are taken over the reviewed delta (files not excluded by
+`review.modelSkipKinds`). Translation-, data-, docs- or config-only changes
+are always light. `deterministic` never calls the triage model; `hybrid`
+calls it only when the thresholds leave the change in the standard band;
+`model` calls it every time. `--tier light|standard|heavy` overrides. The
+decision and its reasons are printed in every summary and report
+([architecture.md](architecture.md#routing-by-complexity)).
 
 ### endpoint (provider settings)
 
@@ -68,21 +106,26 @@ endpoint:
   # chatPath: /chat/completions          # deployment-style URLs override this
   # modelsPath: /models
   # listModels: false                    # endpoints without a /models route
+  # temperature: null                    # number, or null to omit (Azure default)
+  # maxTokensParameter: max_tokens       # max_completion_tokens on Azure
   timeoutMs: 120000
   headers: {} # extra static headers
 ```
 
-Provider presets and recipes (OpenAI, Azure OpenAI, Azure AI Foundry, Amazon
-Bedrock, Google, Anthropic, Mistral, Groq, OpenRouter, internal gateways) are
-in [providers.md](providers.md). Structured output uses JSON mode plus a JSON
-schema where supported, and is validated locally.
+Provider presets and recipes are in [providers.md](providers.md); the two
+Foundry paths in [foundry.md](foundry.md). Structured output uses JSON mode
+and is validated locally.
 
-### features (reserved)
+### observability
 
 ```yaml
-features:
-  ollama: false # reserved; the local-model provider is disabled in this build
+observability:
+  reportDir: .air-review/reports # <run>.md + <run>.json per run
+  diagram: true # Mermaid flowchart of the path actually taken
+  publishInSummary: true # cost table + diagram in the PR summary comment
 ```
+
+See [observability.md](observability.md).
 
 ### telemetry
 
@@ -90,17 +133,18 @@ features:
 telemetry:
   enabled: true
   log: .air-review/telemetry.jsonl # one JSON line per run; stays local
-  pricing: # optional, USD per 1M tokens
-    gpt-4.1:
-      input: 2
-      output: 8
+  pricing: # optional, USD per 1M tokens, keyed by deployment / agent name
+    gpt-5:
+      input: 1.25
+      cachedInput: 0.125
+      output: 10
 ```
 
-Every review records per-role token usage (`planner`, `reviewer`, `verifier`),
-model calls, cache hits and duration, and prints them at the end of the run.
-When `pricing` covers the models used, a cost estimate is included in the CLI
-output, the summary comment and the telemetry log. air-review never ships
-telemetry anywhere; the file is local (or a CI artifact if you upload it).
+Every run records usage per role (`triage`, `planner`, `reviewer`,
+`verifier`), per step, model calls, cache hits, duration, the routing
+decision and the verdict. When `pricing` covers every model called, a cost
+estimate is included everywhere; otherwise the cost is reported as
+unavailable rather than wrong. air-review never ships telemetry anywhere.
 
 ### context
 
@@ -111,12 +155,6 @@ context:
   maxContextRequests: 20 # max repository files read as evidence per review
   maxEvidenceTokens: 30000 # max tokens of exemplar + related-module text sent to the reviewer
 ```
-
-The planner reads existing files of the same kind as each changed file (up to
-three for a new file, one for a small edit) and the exported API of imported
-in-repo modules, within these two budgets. `air-review inspect` shows the plan
-and its estimated token cost before any model call. See
-[architecture.md](architecture.md#contextual-awareness-the-exemplar-planner).
 
 ### review
 
@@ -129,10 +167,15 @@ review:
     minimumConfidence: 0.9
   maxFindings: 40
   maxOutputTokens: 16384 # reviewer output budget; reasoning models spend most of it on hidden reasoning
+  modelSkipKinds: [docs, binary] # file kinds that never justify a model call on their own
 ```
 
-`gate` decides which open findings fail the CI step (exit code 10).
-`publish` decides which severities may become comments at all.
+`gate` decides which open `IN_PR` findings fail the CI step (exit code 10)
+and turn the verdict into "request changes". `publish` decides which
+severities may become comments at all. `modelSkipKinds` accepts
+`translation`, `docs`, `data`, `config`, `tests`, `binary`: a push that only
+touches those kinds runs the deterministic rules and carries previous
+findings over without any model call.
 
 ### memory / cache
 
@@ -144,9 +187,10 @@ cache:
   dir: .air-review/cache
 ```
 
-`pr-ledger` keeps state in PR comments on GitHub; on the local adapter it
-always writes `.air-review/state.json` regardless of this setting. The cache
-is content-addressed and reconstructible.
+`pr-ledger` keeps state in PR comments (GitHub) or threads (Azure DevOps);
+the local adapter always writes `.air-review/state.json`. The cache is
+content-addressed and reconstructible; a reviewer input already seen is
+served without a request and shown as a cache hit in the step table.
 
 ### privacy
 
@@ -171,33 +215,35 @@ platform:
     organizationUrl: https://dev.azure.com/acme # optional; detected in Azure Pipelines
     project: Shop # optional
     repository: storefront # name or GUID; optional
-    tokenEnv: SYSTEM_ACCESSTOKEN # then AZURE_DEVOPS_EXT_PAT, AZURE_DEVOPS_TOKEN
+    tokenEnv: SYSTEM_ACCESSTOKEN # then AZURE_DEVOPS_ACCESS_TOKEN, AZURE_DEVOPS_EXT_PAT, AZURE_DEVOPS_TOKEN
     apiVersion: "7.1"
+    vote:
+      enabled: true # register as a reviewer and cast the verdict (10 / 5 / -5)
+      approveWithSuggestions: true # vote 5 when only non-blocking findings remain; false = no vote
+    status:
+      enabled: false # also post a pull-request status for a "Status" branch policy
+      genre: air-review
+      name: gate
   local:
     base: origin/main # default base ref for local reviews
 ```
 
-Azure DevOps threads, detection and permissions: [docs/azure-devops.md](azure-devops.md).
+Azure DevOps threads, votes, detection and permissions:
+[docs/azure-devops.md](azure-devops.md).
 
 In local mode the diff is computed from the merge base of `base` and the
 checked-out commit, matching pull-request semantics. In GitHub mode, without
 a token, reads fall back to the unauthenticated API; any publish attempt
 without a token fails with exit code 40 and an actionable message.
 
-### Cached tokens and environment pricing
+### Notes
 
-`telemetry.pricing.<deployment>.cachedInput` is the USD rate per 1M cached
-input tokens. Input counts include cached tokens; output counts include
-reasoning tokens. `AIR_REVIEW_PRICING` accepts the complete pricing table as
-JSON and overrides YAML. All called deployments must be priced for a total
-estimate; missing usage makes cost unavailable. No model calls means $0.
+`telemetry.pricing.<name>.cachedInput` is the USD rate per 1M cached input
+tokens; input counts include cached tokens and output counts include
+reasoning tokens. `AIR_REVIEW_PRICING` accepts the complete table as JSON and
+overrides YAML. No model calls means $0.
 
-`endpoint.temperature` accepts a number or null (omit it).
-`endpoint.maxTokensParameter` is `max_tokens` or `max_completion_tokens`;
-`AIR_REVIEW_MAX_TOKENS_PARAMETER` overrides it. Azure defaults to omission of
-temperature and `max_completion_tokens` for reasoning-model compatibility.
-
-`memory.backend: none` disables reading and advancing review memory.
-Local summaries and telemetry remain available. `cache.enabled: false`
-disables result reuse and cache writes. The planner is currently structural
-and deterministic: its configured model is not called.
+`memory.backend: none` disables reading and advancing review memory; local
+summaries, reports and telemetry remain available. `cache.enabled: false`
+disables result reuse and cache writes. The planner is deterministic today:
+its configured model is not called.

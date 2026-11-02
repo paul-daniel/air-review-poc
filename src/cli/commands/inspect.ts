@@ -1,6 +1,8 @@
 import { reviewableFiles } from "../../context/diff.js";
 import { analyzeDelta, readProjectFacts } from "../../context/analyze.js";
 import { describeProfile } from "../../context/profile.js";
+import { changeKindOf, measureComplexity, triageDeterministically } from "../../review/triage.js";
+import { requireRoleModels, resolveTierModels } from "../../model/router.js";
 import type { CliContext } from "../context.js";
 import { printJson, printTable, c } from "../output.js";
 
@@ -19,9 +21,29 @@ export async function runInspect(ctx: CliContext, options: InspectOptions): Prom
     maxFiles: ctx.config.context.maxContextRequests,
   });
 
+  // Routing preview: what the triage step would decide from the thresholds alone
+  // (the triage model, when configured, may still refine the ambiguous band).
+  const modelWorthy = reviewableFiles(delta).filter(
+    (file) => !ctx.config.review.modelSkipKinds.includes(changeKindOf(file.path) as never),
+  );
+  const signals = measureComplexity({ ...delta, files: modelWorthy });
+  const pre = triageDeterministically(signals, ctx.config.routing);
+  const roleModels = Object.values(ctx.models).every(Boolean) ? requireRoleModels(ctx.models) : null;
+  const tiers = roleModels ? resolveTierModels(ctx.config, roleModels) : null;
+  const routingPreview = {
+    tier: pre.tier,
+    ambiguous: pre.ambiguous,
+    reasons: pre.reasons,
+    reviewerModel: tiers?.[pre.tier].reviewer,
+    verifierModel: tiers?.[pre.tier].verifier,
+    modelWorthyFiles: modelWorthy.length,
+    signals,
+  };
+
   if (options.json) {
     printJson({
       pr: snapshot,
+      routingPreview,
       delta: {
         from: delta.fromSha,
         to: delta.toSha,
@@ -74,6 +96,15 @@ export async function runInspect(ctx: CliContext, options: InspectOptions): Prom
       `\n${c.bold("repository profile")}\n${describeProfile(analysis.evidence.profile)}\n`,
     );
   }
+
+  process.stdout.write(
+    `\n${c.bold("routing preview")} ${c.dim(
+      modelWorthy.length === 0
+        ? "nothing for a model to review (docs/binaries only)"
+        : `${pre.tier} tier${routingPreview.reviewerModel ? ` → reviewer ${routingPreview.reviewerModel}, verifier ${routingPreview.verifierModel}` : ""}${pre.ambiguous && ctx.config.routing.mode !== "deterministic" ? " (ambiguous: the triage model will be consulted)" : ""}`,
+    )}\n`,
+  );
+  for (const reason of pre.reasons) process.stdout.write(`  - ${reason}\n`);
 
   process.stdout.write(
     `\n${c.bold("context plan")} ${c.dim(`~${analysis.plan.estimatedTokens} evidence tokens, ${analysis.plan.filesRead} files read`)}\n`,

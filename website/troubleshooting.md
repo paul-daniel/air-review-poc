@@ -53,7 +53,7 @@ Details in [Exit codes](/reference/exit-codes).
 
 **`init` refuses to run.** The preset has a placeholder URL (`azure-openai`, `azure-foundry`, `openai-compatible`): pass `--base-url`. An existing `air-review.yaml` is never overwritten without `--force`.
 
-**Provider `ollama` is rejected.** The local-model provider is disabled in this build (`features.ollama`). Use a hosted provider.
+**Provider `ollama` is rejected.** Local model runtimes are not supported. Use a hosted provider, or `mock` for an offline dry-run.
 
 **Unknown option or command.** `air-review help <command>` prints the accepted options; unknown commands get a typo suggestion.
 

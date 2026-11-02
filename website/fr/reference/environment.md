@@ -16,7 +16,6 @@ Les secrets sont marqués **oui** : rangez-les dans un magasin de secrets CI ou 
 | `AIR_REVIEW_AUTH`                 | non     | `api-key` ou `bearer`                                                                                                                                                              |
 | `AIR_REVIEW_API`                  | non     | `auto` (défaut), `chat-completions` ou `responses`                                                                                                                                 |
 | `AIR_REVIEW_MAX_TOKENS_PARAMETER` | non     | `max_tokens` ou `max_completion_tokens` (Azure utilise le second par défaut)                                                                                                       |
-| `AIR_REVIEW_OPENAI_BASE_URL`      | non     | ancien alias d'`AIR_REVIEW_BASE_URL` ; toujours lu                                                                                                                                 |
 
 ### Variables de clé des presets
 
@@ -44,6 +43,10 @@ Chaque preset lit sa propre variable quand `AIR_REVIEW_API_KEY` et `AIR_REVIEW_A
 | `AIR_REVIEW_MODEL_REVIEWER` | non    | rôle relecteur (appel 1)                                                    |
 | `AIR_REVIEW_MODEL_VERIFIER` | non    | rôle vérificateur (appel 2)                                                 |
 | `AIR_REVIEW_MODEL_PLANNER`  | non    | rôle planificateur ; réservé, le planificateur est déterministe aujourd'hui |
+| `AIR_REVIEW_MODEL_TRIAGE`   | non    | rôle de triage (niveau de complexité)                                       |
+| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY` | non | relecteur par niveau de complexité                          |
+| `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY` | non | vérificateur par niveau de complexité                       |
+| `AIR_REVIEW_ROUTING_MODE`   | non    | `deterministic`, `hybrid` (défaut) ou `model`                               |
 
 Sur Azure, ce sont des **noms de déploiement**, pas des identifiants de modèle.
 
@@ -99,13 +102,6 @@ Ne définissez les variables de l'agent à la main que pour simuler un pipeline 
 | `AIR_REVIEW_PRICING` | non    | table de prix en JSON, USD par million de jetons, indexée par modèle ou nom de déploiement ; surcharge `telemetry.pricing` |
 
 Exemple : `{"gpt-4.1":{"input":2,"cachedInput":0.5,"output":8}}`. La télémétrie est locale ; rien n'est jamais téléversé.
-
-## Interne et réservé
-
-| Variable         | Secret  | Signification                                                                                          |
-| ---------------- | ------- | ------------------------------------------------------------------------------------------------------ |
-| `OLLAMA_HOST`    | non     | runtime de modèles local, seulement derrière `features.ollama` (désactivé) ; utilisé par le script e2e |
-| `OLLAMA_API_KEY` | **oui** | idem                                                                                                   |
 
 ## Bitbucket et GitLab (lues par votre pipeline, pas par l'outil)
 

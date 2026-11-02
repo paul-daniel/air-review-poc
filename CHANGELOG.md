@@ -4,6 +4,58 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-11-03 — MVP V1
+
+### Added
+
+- **Routing by complexity.** A `triage` role and per-tier models (`models.tiers.light` / `heavy`,
+  `AIR_REVIEW_MODEL_REVIEWER_LIGHT|HEAVY`, `AIR_REVIEW_MODEL_VERIFIER_LIGHT|HEAVY`). `review/triage.ts`
+  measures the delta (files, lines, modules, file kinds) and picks `light`, `standard` or `heavy`; in
+  `routing.mode: hybrid` a cheap triage model refines the ambiguous middle band, `model` lets it decide every
+  time, `deterministic` never calls it. `--tier` overrides. The decision, its method and its reasons are shown
+  in the terminal, the summary comment, the run report, `--json` and the telemetry log.
+- **Observability.** A per-step trace (duration, agent/model, tokens, estimated cost) for load state, delta,
+  analysis, rules, triage, reviewer, verifier, reconcile, gate, publish and verdict; a Markdown + JSON run
+  report in `.air-review/reports/<run>`; a Mermaid diagram of the workflow actually executed (cached and
+  skipped steps greyed, unused tiers shown as not selected); `telemetry.jsonl` lines carry `verdict`, `routing`
+  and `steps[]`.
+- **Review format.** Findings carry a `category` (correctness, security, performance, maintainability,
+  consistency, tests, docs). Inline comments lead with severity and category, state the consequence, give the
+  fix as a sentence plus an optional code block (a committable ```suggestion on GitHub when the reviewer
+  declares `replacesAnchor`), list the evidence and end with a machine-readable footer. The summary comment
+  opens with the verdict, shows the routing decision, a findings table, "since the last review", and collapsed
+  cost and workflow sections. Rationale and comparison with CodeRabbit, Qodo/PR-Agent and GitHub Copilot in
+  docs/review-format.md.
+- **Azure DevOps as a real reviewer.** Vote from the verdict (10 approved, 5 approved with suggestions,
+  -5 waiting for author, 0 when the run could not complete; `platform.azureDevops.vote`), an optional pull-request
+  status `air-review/gate` for a Status branch policy (`platform.azureDevops.status`), and finding threads looked
+  up by their hidden marker before any creation so a lost ledger or an identity change never duplicates a thread.
+- **Incremental review and cache.** A head already reviewed with the same configuration is never reviewed again,
+  even with `--publish` (`--force` overrides); a push whose delta has no model-worthy file
+  (`review.modelSkipKinds`, default docs and binaries) costs no model call; the reviewer input cache is shown as a
+  cache hit in the step table.
+- **Providers.** `azure-foundry-agent` calls one Foundry Agent Service prompt agent per role through the
+  project endpoint; `mock` is an offline, free, deterministic provider for tests and demos.
+- **Verdict** (`approve`, `approve-with-suggestions`, `request-changes`, `comment`) derived once in
+  `review/verdict.ts` and used by the summary, the vote and the exit code.
+- Documentation: docs/foundry.md (deployments and prompt agents, interchangeable models, start-up procedure,
+  model router), docs/review-format.md, docs/observability.md, a rewritten docs/azure-devops.md with the
+  ready-to-use examples/azure-pipelines.yml, examples/air-review.foundry.yaml, updated architecture,
+  configuration, providers and commands references.
+
+### Changed
+
+- `ScmAdapter.upsertSummary(summary, findings)` receives the findings so the summary can list them;
+  `castVote` casts the verdict rather than a gate boolean.
+- `configHash` uses the configured (standard-tier) models, so a light follow-up push stays incremental against a
+  heavy first review.
+- Usage is reported per role for four roles (`triage`, `planner`, `reviewer`, `verifier`).
+
+### Removed
+
+- The reserved Ollama provider, the `features` section and the legacy `openai:` config section
+  (use `endpoint:`).
+
 ## [Unreleased]
 
 ### Added

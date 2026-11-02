@@ -36,7 +36,8 @@ way to parameterize a pipeline:
 | `AIR_REVIEW_BASE_URL`                                  | endpoint URL (overrides the preset)                  |
 | `AIR_REVIEW_API_KEY`                                   | API key value (simplest for repo secrets)            |
 | `AIR_REVIEW_API_KEY_ENV`                               | name of another env var holding the key              |
-| `AIR_REVIEW_MODEL_PLANNER` / `_REVIEWER` / `_VERIFIER` | one model per agent role                             |
+| `AIR_REVIEW_MODEL_TRIAGE` / `_PLANNER` / `_REVIEWER` / `_VERIFIER` | one model per agent role                 |
+| `AIR_REVIEW_MODEL_REVIEWER_LIGHT` / `_HEAVY`           | reviewer per complexity tier (see docs/foundry.md)   |
 | `AIR_REVIEW_MODEL`                                     | shortcut for the reviewer model                      |
 
 ```bash
@@ -116,9 +117,6 @@ headers.
 | `timeoutMs`    | `120000`                             | HTTP timeout per model call                                          |
 | `headers`      | `{}`                                 | extra static headers                                                 |
 
-Configs written before the preset system used an `openai:` section; it is
-still read and merged, with the `endpoint` section taking precedence.
-
 ## Verify the endpoint
 
 ```bash
@@ -129,13 +127,15 @@ air-review models      # what the endpoint offers, and which roles use it
 If a reviewer or verifier request fails, review exits with code 30 and surfaces the
 provider's error message, including which env var holds the key.
 
-## Local model runtimes
+## Two more presets
 
-Running models on the same machine as the review (Ollama and similar) is
-reserved for later and disabled in this build; it is intentionally not part of
-the pipeline path, where a cold start and a model download would dominate the
-review time. The reserved switch lives in the config schema under
-`features.ollama`, and provider `ollama` is rejected while it is off.
+| Preset id             | What it is |
+| --------------------- | ---------- |
+| `azure-foundry-agent` | Microsoft Foundry Agent Service: each role model is a **prompt agent name** in a Foundry project (`endpoint.baseUrl` = `https://<resource>.services.ai.azure.com/api/projects/<project>`, Entra ID bearer token). See [foundry.md](foundry.md). |
+| `mock`                | Offline, free and deterministic: no network. The reviewer emits findings only from `// air-review:expect SEVERITY category rule-id: title` markers in the diff, the verifier keeps everything, triage echoes the deterministic pre-assessment. For tests, demos and pipeline dry-runs. |
+
+Local model runtimes (Ollama and similar) are not supported: a cold start
+and a model download would dominate the review time in a pipeline.
 
 ## Microsoft Foundry: the verified inference path
 

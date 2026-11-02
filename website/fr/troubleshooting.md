@@ -53,7 +53,7 @@ Détails dans [Codes de sortie](/fr/reference/exit-codes).
 
 **`init` refuse de tourner.** Le preset a une URL de substitution (`azure-openai`, `azure-foundry`, `openai-compatible`) : passez `--base-url`. Un `air-review.yaml` existant n'est jamais écrasé sans `--force`.
 
-**Le fournisseur `ollama` est refusé.** Le fournisseur de modèles locaux est désactivé dans cette version (`features.ollama`). Utilisez un fournisseur hébergé.
+**Le fournisseur `ollama` est refusé.** Les runtimes de modèles locaux ne sont pas pris en charge. Utilisez un fournisseur hébergé, ou `mock` pour un essai hors ligne.
 
 **Option ou commande inconnue.** `air-review help <commande>` affiche les options acceptées ; les commandes inconnues reçoivent une suggestion de correction.
 

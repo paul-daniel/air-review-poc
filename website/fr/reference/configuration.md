@@ -27,6 +27,7 @@ endpoint:
 models:
   default: gpt-4o-mini # repli pour tous les rôles
   roles:
+    triage: gpt-4o-mini # décide du niveau de complexité
     planner: gpt-4o-mini # réservé : déterministe aujourd'hui
     reviewer: gpt-4.1 # passe de raisonnement forte (appel 1)
     verifier: gpt-4o-mini # vérifier et calibrer avant publication (appel 2)
@@ -79,6 +80,8 @@ platform:
 | `models.roles.reviewer` | `models.default`       | modèle de raisonnement fort, appel 1                                                                                                                                               |
 | `models.roles.verifier` | `models.default`       | modèle petit à moyen, appel 2                                                                                                                                                      |
 | `models.roles.planner`  | relecteur, puis défaut | réservé ; le planificateur est déterministe et n'appelle pas de modèle                                                                                                             |
+| `models.roles.triage`   | planificateur, puis défaut | modèle de triage (bon marché) qui décide du niveau de complexité ; voir `routing` et `models.tiers` dans docs/configuration.md du dépôt |
+| `models.tiers.light` / `heavy` | rôle standard | relecteur/vérificateur par niveau de complexité (`reviewer`, `verifier`) |
 
 Le moteur consomme des rôles, pas des modèles. Sur Azure, la valeur est toujours le **nom du déploiement**.
 
@@ -100,8 +103,6 @@ Le moteur consomme des rôles, pas des modèles. Sur Azure, la valeur est toujou
 | `headers`            | `{}`                                             | en-têtes statiques supplémentaires                                                                                                          |
 | `temperature`        | preset (omis sur Azure)                          | nombre, ou `null` pour omettre                                                                                                              |
 | `maxTokensParameter` | `max_tokens` (`max_completion_tokens` sur Azure) | nom du paramètre de limite de jetons                                                                                                        |
-
-Les configurations écrites avant le système de presets utilisaient une section `openai:` ; elle est toujours lue et fusionnée, `endpoint` ayant la priorité.
 
 ### `frameworks`
 
@@ -181,11 +182,3 @@ platform:
 
 En mode local, le diff est la base de fusion entre `base` et le commit extrait. En mode GitHub sans jeton, les lectures passent par l'API non authentifiée et toute tentative de publication échoue avec le code `40` et un message explicite.
 
-### `features` (réservé)
-
-```yaml
-features:
-  ollama: false
-```
-
-Le fournisseur de modèles locaux est désactivé dans cette version ; le fournisseur `ollama` est refusé tant que le drapeau est à `false`.

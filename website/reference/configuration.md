@@ -27,6 +27,7 @@ endpoint:
 models:
   default: gpt-4o-mini # fallback for every role
   roles:
+    triage: gpt-4o-mini # decides the complexity tier
     planner: gpt-4o-mini # reserved: deterministic today
     reviewer: gpt-4.1 # strong reasoning pass (call 1)
     verifier: gpt-4o-mini # verify and calibrate before publish (call 2)
@@ -79,6 +80,8 @@ platform:
 | `models.roles.reviewer` | `models.default`       | strong reasoning model, model call 1                                                                                                                                  |
 | `models.roles.verifier` | `models.default`       | cheap to medium model, model call 2                                                                                                                                   |
 | `models.roles.planner`  | reviewer, then default | reserved; the planner is deterministic and does not call a model                                                                                                      |
+| `models.roles.triage`   | planner, then default  | cheap triage model that decides the complexity tier; see `routing` and `models.tiers` in the repository's docs/configuration.md |
+| `models.tiers.light` / `heavy` | standard role | reviewer/verifier per complexity tier (`reviewer`, `verifier`) |
 
 Roles, not models, are what the engine consumes. On Azure the value is always the **deployment name**.
 
@@ -100,8 +103,6 @@ Roles, not models, are what the engine consumes. On Azure the value is always th
 | `headers`            | `{}`                                            | extra static headers                                                                                  |
 | `temperature`        | preset (omitted on Azure)                       | number, or `null` to omit                                                                             |
 | `maxTokensParameter` | `max_tokens` (`max_completion_tokens` on Azure) | name of the token-limit parameter                                                                     |
-
-Configs written before the preset system used an `openai:` section; it is still read and merged, with `endpoint` taking precedence.
 
 ### `frameworks`
 
@@ -181,11 +182,3 @@ platform:
 
 In local mode the diff is the merge base of `base` and the checked-out commit. In GitHub mode without a token, reads use the unauthenticated API and any publish attempt fails with exit code `40` and an actionable message.
 
-### `features` (reserved)
-
-```yaml
-features:
-  ollama: false
-```
-
-The local-model provider is disabled in this build; provider `ollama` is rejected while the flag is off.

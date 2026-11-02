@@ -85,12 +85,20 @@ air-review review --ci github --owner acme --repo storefront --pr 483 --dry-run
 air-review review --deterministic-only        # structural rules, zero model calls
 air-review review --model gpt-4.1 --verifier-model gpt-4o-mini
 air-review review --force                     # re-review the same head
-air-review review --json                      # machine-readable result
+air-review review --tier heavy                # bypass triage and use the heavy reviewer
+air-review review --json                      # machine-readable result (routing, steps, diagram, report paths)
 ```
 
-Useful switches: `--ci auto|github|local`, `--base`, `--owner/--repo/--pr`,
-`--model`, `--planner-model`, `--reviewer-model`, `--verifier-model`,
-`--deterministic-only`, `--no-verifier`, `--no-cache`, `--json`.
+Useful switches: `--ci auto|github|azure-devops|local`, `--base`, `--owner/--repo/--pr`,
+`--org/--project`, `--model`, `--triage-model`, `--planner-model`, `--reviewer-model`,
+`--verifier-model`, `--tier light|standard|heavy`, `--deterministic-only`, `--no-verifier`,
+`--no-cache`, `--json`.
+
+A head already reviewed with the same configuration is never reviewed again
+(not even with `--publish`); pass `--force`. A push that only touches
+`review.modelSkipKinds` files (docs, binaries by default) makes no model call.
+Every run writes `.air-review/reports/<run>.md` and `.json` with the routing
+decision, the cost per step and the workflow diagram, and prints the path.
 
 Exit codes: `0` gate passed, `10` gate failed, `20` config, `30` provider,
 `40` SCM, `50` internal.
@@ -119,7 +127,7 @@ air-review models --json
 ## telemetry
 
 Recent runs from `.air-review/telemetry.jsonl`: findings, tokens, model calls,
-cost estimate, duration and gate result.
+cost estimate, duration, routing tier, verdict and gate result.
 
 ```bash
 air-review telemetry
@@ -148,6 +156,7 @@ air-review config
 air-review config get models.roles.reviewer
 air-review config set models.roles.reviewer mistral-large-latest
 air-review config set review.gate.minimumConfidence 0.95
+air-review config set models.tiers.heavy.reviewer gpt-5-codex
 air-review config unset models.roles.planner
 ```
 
@@ -184,6 +193,10 @@ range, without enclosing boxes. Long ranges show the first and last portions
 with an omission marker. Text and code wrap to the terminal width (up to 112
 columns), accounting for Unicode and ANSI styles. Recognized secrets and
 terminal control sequences are removed from display text.
+
+After the findings, a **Routing** section says which tier and models were
+chosen and why, and a **Steps** section lists every step with its status,
+model, duration, tokens and cost — the same data as the run report.
 
 Progress animates during work; reports reveal in at most 12 short steps in
 interactive terminals. `--no-animation` or `AIR_REVIEW_ANIMATION=0` disables
