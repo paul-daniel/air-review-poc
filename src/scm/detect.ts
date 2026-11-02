@@ -203,6 +203,10 @@ function createAzureDevOpsAdapter(
   }
 
   const { token, kind } = azureDevOpsToken(config);
+  const buildUrl =
+    env.organizationUrl && project && process.env.BUILD_BUILDID
+      ? `${env.organizationUrl.replace(/\/+$/, "")}/${encodeURIComponent(project)}/_build/results?buildId=${process.env.BUILD_BUILDID}`
+      : undefined;
   return new AzureDevOpsAdapter({
     organizationUrl,
     project,
@@ -212,6 +216,9 @@ function createAzureDevOpsAdapter(
     tokenKind: kind,
     apiVersion: settings.apiVersion,
     git: gitRepo,
+    vote: settings.vote.enabled,
+    status: settings.status,
+    statusTargetUrl: buildUrl,
   });
 }
 

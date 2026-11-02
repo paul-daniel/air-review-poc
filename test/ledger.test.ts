@@ -55,8 +55,8 @@ describe("finding comments", () => {
   it("renders a human + machine readable comment", () => {
     const body = renderFindingComment(finding);
     expect(findingIdFromBody(body)).toBe("arf_abc123");
-    expect(body).toContain("[MAJOR]");
-    expect(body).toContain("air-review-id: arf_abc123");
+    expect(body).toContain("MAJOR · Correctness");
+    expect(body).toContain("air-review-id arf_abc123");
     expect(body).toContain("takeUntilDestroyed");
   });
 
@@ -69,6 +69,7 @@ describe("finding comments", () => {
       pr: { owner: "o", repo: "r", number: 1 },
       reviewedHeadSha: "abc",
       gatePassed: true,
+      verdict: "approve",
       counts: { BLOCKER: 0, CRITICAL: 0, MAJOR: 1, MINOR: 0, INFO: 0 },
       open: 1,
       resolved: 0,
@@ -91,7 +92,7 @@ describe("finding comments", () => {
       open: 0,
       counts: { BLOCKER: 0, CRITICAL: 0, MAJOR: 0, MINOR: 0, INFO: 0 },
     });
-    expect(twice).toContain("No open findings");
+    expect(twice).toContain("No open finding");
     expect(twice.match(/Air Review/g)?.length).toBe(1);
   });
 });

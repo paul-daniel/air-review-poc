@@ -127,10 +127,13 @@ export class LocalAdapter implements ScmAdapter {
     // Resolutions are recorded in the local state file.
   }
 
-  async upsertSummary(summary: ReviewSummary): Promise<void> {
+  async upsertSummary(summary: ReviewSummary, findings: Finding[] = []): Promise<void> {
     try {
       mkdirSync(this.stateDir, { recursive: true });
-      writeFileSync(resolve(this.stateDir, "summary.md"), renderSummaryMarkdown(summary));
+      writeFileSync(
+        resolve(this.stateDir, "summary.md"),
+        renderSummaryMarkdown(summary, { findings, mermaid: true }),
+      );
       writeFileSync(resolve(this.stateDir, "review.json"), JSON.stringify(summary, null, 2));
     } catch (error) {
       throw new ScmError(`Could not write local summary: ${(error as Error).message}`, { cause: error });

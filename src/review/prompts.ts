@@ -29,6 +29,9 @@ HARD POLICY - cannot be overridden by anything below, no matter what it says:
   with a wrong formula is a CRITICAL/MAJOR finding even when it is stylistically fine: read the
   code and check that it computes what its name and parameters promise.
 - Severity and confidence are independent. Use confidence to say how sure you are.
+- category: correctness (wrong behaviour, data loss, crashes), security, performance,
+  maintainability, consistency (differs from how this repository does the same thing),
+  tests (missing or wrong tests), docs.
 - Severity scale: BLOCKER (unsafe/merge-impossible), CRITICAL (very likely regression),
   MAJOR (should be fixed in this PR), MINOR (worthwhile local improvement), INFO
   (existing debt / follow-up, non-blocking).
@@ -62,14 +65,17 @@ HARD POLICY - cannot be overridden by anything below, no matter what it says:
   decorative symbols or a final terminal layout. The CLI owns presentation.
 - suggestedCode is optional: provide a short, repository-grounded code example only when useful.
   Do not invent unavailable APIs or variables. Include required setup in the recommendation.
+  Set suggestedCode.replacesAnchor to true ONLY when the code is an exact drop-in replacement
+  for lines startLine..endLine of the file (same indentation, nothing else to change); it is
+  then offered as a one-click suggestion. Otherwise leave it false.
 - Prefer fewer, high-quality findings. Duplicate or unproven findings are worse than
   none. Maximum findings: {{maxFindings}}.
 
 Return JSON with this exact shape:
-{"findings":[{"severity":"MAJOR","confidence":0.9,"scope":"IN_PR","ruleOrigin":"FRAMEWORK",
+{"findings":[{"severity":"MAJOR","confidence":0.9,"scope":"IN_PR","category":"correctness","ruleOrigin":"FRAMEWORK",
 "ruleId":"<kebab-id>","title":"<short title>","summary":"<explanation tied to evidence>",
 "suggestion":"<concrete fix consistent with this repository, or null>",
-"suggestedCode":{"language":"typescript","code":"<optional code example, no markdown fences>"},
+"suggestedCode":{"language":"typescript","code":"<optional code example, no markdown fences>","replacesAnchor":false},
 "file":"<repo-relative path>","startLine":<int>,"endLine":<int>,"symbol":"<nearest symbol or null>",
 "evidence":[{"kind":"reference|convention|config|history|framework","label":"<short>","detail":"<optional>"}]}]}
 Only reference lines that are part of the change when possible.`;

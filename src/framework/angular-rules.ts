@@ -32,6 +32,7 @@ async function subscriptionCleanupFindings(ctx: RuleContext): Promise<CandidateF
           ? {
               language: "typescript",
               code: `${subscription[1]}\n  .pipe(${CLEANUP_OPERATOR}(this.destroyRef))\n  .subscribe(${subscription[2]});`,
+              replacesAnchor: false,
             }
           : undefined;
       findings.push({
@@ -40,6 +41,7 @@ async function subscriptionCleanupFindings(ctx: RuleContext): Promise<CandidateF
         severity: "MAJOR",
         confidence: repoHasConvention ? 0.94 : 0.82,
         scope: "IN_PR",
+        category: "correctness",
         repoStatus: repoHasConvention ? "CONVENTION" : "NONE",
         title: "Subscription may outlive its component",
         summary:
@@ -104,6 +106,7 @@ async function containerPresenterFindings(ctx: RuleContext): Promise<CandidateFi
         severity: confidence >= 0.8 ? "MAJOR" : "MINOR",
         confidence,
         scope: "IN_PR",
+        category: "consistency",
         repoStatus: "CONVENTION",
         title: "Component bypasses the feature's container/presenter separation",
         summary:

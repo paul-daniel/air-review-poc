@@ -24,6 +24,7 @@ const record = (overrides: Record<string, unknown> = {}) => ({
   pullRequest: 42,
   skipped: false,
   gatePassed: true,
+  verdict: "approve",
   findings: { open: 2, resolved: 1 },
   usage: { inputTokens: 3200, outputTokens: 900, modelCalls: 2, estimatedCostUsd: 0.0042 },
   durationMs: 8300,

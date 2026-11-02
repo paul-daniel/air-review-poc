@@ -161,7 +161,7 @@ export class GitHubAdapter implements ScmAdapter {
         path: finding.anchor.file,
         line: finding.anchor.startLine,
         side: "RIGHT",
-        body: renderFindingComment(finding),
+        body: renderFindingComment(finding, { suggestionBlocks: true }),
       });
       return { platform: "github", id: String(data.id) };
     } catch (error) {
@@ -180,7 +180,7 @@ export class GitHubAdapter implements ScmAdapter {
         owner: this.options.owner,
         repo: this.options.repo,
         issue_number: this.options.pullNumber,
-        body: renderFindingComment(finding),
+        body: renderFindingComment(finding, { suggestionBlocks: true }),
       });
       return { platform: "github", id: `${GENERAL_COMMENT_PREFIX}${data.id}` };
     } catch (error) {
@@ -214,7 +214,7 @@ export class GitHubAdapter implements ScmAdapter {
   async updateFinding(ref: ThreadRef, finding: Finding): Promise<void> {
     this.requireToken(`update finding ${finding.id}`);
     try {
-      await this.updateCommentBody(ref, renderFindingComment(finding));
+      await this.updateCommentBody(ref, renderFindingComment(finding, { suggestionBlocks: true }));
     } catch (error) {
       throw new ScmError(`Could not update finding ${finding.id}: ${(error as Error).message}`, {
         cause: error,
@@ -237,12 +237,12 @@ export class GitHubAdapter implements ScmAdapter {
     }
   }
 
-  async upsertSummary(summary: ReviewSummary): Promise<void> {
+  async upsertSummary(summary: ReviewSummary, findings: Finding[] = []): Promise<void> {
     this.requireToken("write the review summary to the pull request");
     const { upsertSummaryBody } = await import("../state/summary.js");
     const comments = await this.issueComments();
     const existing = comments.find((c) => c.body?.includes(SUMMARY_MARKER_OPEN));
-    const body = upsertSummaryBody(existing?.body ?? "", summary);
+    const body = upsertSummaryBody(existing?.body ?? "", summary, { findings, mermaid: true });
     try {
       if (existing) {
         await this.octokit.rest.issues.updateComment({

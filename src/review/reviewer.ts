@@ -26,18 +26,36 @@ const originZ = z.preprocess(
   z.enum(["PROJECT_CONFIG", "FRAMEWORK", "REPO_CONVENTION", "HEURISTIC"]),
 );
 const numberZ = z.preprocess((value) => normalizeNumber(value), z.number().int().positive());
+const categoryZ = z.preprocess(
+  (value) =>
+    normalizeEnum(value, [
+      "correctness",
+      "security",
+      "performance",
+      "maintainability",
+      "consistency",
+      "tests",
+      "docs",
+    ] as const) ?? "correctness",
+  z.enum(["correctness", "security", "performance", "maintainability", "consistency", "tests", "docs"]),
+);
 
 const findingZ = z.object({
   severity: severityZ,
   confidence: z.preprocess((value) => normalizeNumber(value), z.number().min(0).max(1)),
   scope: scopeZ,
+  category: categoryZ.optional().default("correctness"),
   ruleOrigin: originZ,
   ruleId: z.string().min(1).max(80),
   title: z.string().min(3).max(300),
   summary: z.string().min(10).max(2000),
   suggestion: z.string().max(2000).nullable().optional(),
   suggestedCode: z
-    .object({ language: z.string().regex(/^[a-zA-Z0-9+#.-]{1,40}$/), code: z.string().min(1).max(4000) })
+    .object({
+      language: z.string().regex(/^[a-zA-Z0-9+#.-]{1,40}$/),
+      code: z.string().min(1).max(4000),
+      replacesAnchor: z.boolean().optional(),
+    })
     .nullable()
     .optional(),
   file: z.string().min(1),

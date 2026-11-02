@@ -111,6 +111,7 @@ function summaryOf(gatePassed: boolean): ReviewSummary {
     pr: { owner: "Shop", repo: "storefront", number: 483 },
     reviewedHeadSha: "head-sha",
     gatePassed,
+    verdict: gatePassed ? "approve" : "request-changes",
     counts: { BLOCKER: 0, CRITICAL: gatePassed ? 0 : 1, MAJOR: 0, MINOR: 0, INFO: 0 },
     open: gatePassed ? 0 : 1,
     resolved: 0,
@@ -218,7 +219,7 @@ describe("AzureDevOpsAdapter", () => {
     expect(body.comments).toHaveLength(1);
     expect(body.comments[0]).toMatchObject({ parentCommentId: 0, commentType: "text" });
     expect(body.comments[0]?.content).toContain(findingMarker("arf_abc123"));
-    expect(body.comments[0]?.content).toContain("[MAJOR] Subscription is never torn down");
+    expect(body.comments[0]?.content).toContain("MAJOR · Correctness — Subscription is never torn down");
     expect(create.headers["Content-Type"]).toBe("application/json");
   });
 
@@ -229,7 +230,7 @@ describe("AzureDevOpsAdapter", () => {
       method: "PATCH",
       url: `${BASE}/threads/148/comments/1?api-version=7.1`,
     });
-    expect((calls[0]?.body as { content: string }).content).toContain("[CRITICAL]");
+    expect((calls[0]?.body as { content: string }).content).toContain("CRITICAL ·");
   });
 
   it("creates the state thread closed, then updates the comment in place", async () => {
@@ -291,7 +292,7 @@ describe("AzureDevOpsAdapter", () => {
       SUMMARY_MARKER_OPEN,
     );
     expect((create.body as { comments: Array<{ content: string }> }).comments[0]?.content).toContain(
-      "❌ gate failed",
+      "Changes requested",
     );
 
     const previous = `${SUMMARY_MARKER_OPEN}\nold\n<!-- /air-review:summary:v1 -->`;
@@ -307,7 +308,7 @@ describe("AzureDevOpsAdapter", () => {
       `${BASE}/threads/9/comments/1?api-version=7.1`,
       `${BASE}/threads/9?api-version=7.1`,
     ]);
-    expect((patches[0]?.body as { content: string }).content).toContain("✅ gate passed");
+    expect((patches[0]?.body as { content: string }).content).toContain("Approved");
     expect((patches[0]?.body as { content: string }).content).not.toContain("\nold\n");
     expect(patches[1]?.body).toEqual({ status: "closed" });
   });

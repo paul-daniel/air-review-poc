@@ -186,7 +186,7 @@ describe("GitHubAdapter", () => {
         path: "a.ts",
         line: 3,
         side: "RIGHT",
-        body: expect.stringContaining("air-review-id: arf_abc123"),
+        body: expect.stringContaining("air-review-id arf_abc123"),
       }),
     );
   });
@@ -203,6 +203,7 @@ describe("GitHubAdapter", () => {
       pr: { owner: "acme", repo: "storefront", number: 42 },
       reviewedHeadSha: "h",
       gatePassed: true,
+      verdict: "approve",
       counts: { BLOCKER: 0, CRITICAL: 0, MAJOR: 0, MINOR: 0, INFO: 0 },
       open: 0,
       resolved: 0,
@@ -261,7 +262,7 @@ describe("GitHubAdapter interaction findings", () => {
     expect(calls.createComment).toHaveBeenCalledWith(
       expect.objectContaining({
         issue_number: 42,
-        body: expect.stringContaining("air-review-id: arf_fol1ow"),
+        body: expect.stringContaining("air-review-id arf_fol1ow"),
       }),
     );
     await scm.updateFinding(ref, { ...finding, summary: "updated" });

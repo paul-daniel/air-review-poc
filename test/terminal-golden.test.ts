@@ -122,7 +122,7 @@ describe("terminal golden reports", () => {
     const finding = structuredClone(outcome.findings[0]!);
     finding.suggestedCode = { language: "typescript", code: "const example = `value`;" };
     const text = renderFindingComment(finding);
-    expect(text).toContain("\nUse takeUntilDestroyed(this.destroyRef).\n");
+    expect(text).toContain("**Fix:** Use takeUntilDestroyed(this.destroyRef).\n");
     expect(text).toContain("```typescript\nconst example = `value`;\n```");
     expect(text).not.toContain("```ts\nUse");
   });

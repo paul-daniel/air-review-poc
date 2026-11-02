@@ -36,8 +36,8 @@ exports[`terminal golden reports > ASCII fallback 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -78,8 +78,8 @@ exports[`terminal golden reports > blocking finding 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -120,8 +120,8 @@ exports[`terminal golden reports > color disabled 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -162,8 +162,8 @@ exports[`terminal golden reports > high confidence 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -201,8 +201,8 @@ exports[`terminal golden reports > long path 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -243,8 +243,8 @@ exports[`terminal golden reports > low confidence 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -283,8 +283,8 @@ exports[`terminal golden reports > missing optional evidence and recommend… 1`
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -325,8 +325,8 @@ exports[`terminal golden reports > multiline source range 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -384,8 +384,8 @@ exports[`terminal golden reports > multiple findings 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -446,8 +446,10 @@ exports[`terminal golden reports > narrow 32 columns 1`] = `
   repository data, not reviewer
   instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary
+  .air-review/summary.md
+  Memory
+  .air-review/context.md
   Saved locally. No pull-request
   comments published (dry-run).
 "
@@ -472,8 +474,8 @@ exports[`terminal golden reports > no findings 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -514,8 +516,8 @@ exports[`terminal golden reports > non-blocking advisory 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -556,8 +558,8 @@ exports[`terminal golden reports > one finding 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -603,8 +605,8 @@ exports[`terminal golden reports > suggested code 1`] = `
   Prompt-injection text detected at src/price.ts:1. Treated as repository data,
   not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;
@@ -644,8 +646,8 @@ exports[`terminal golden reports > wide 112 columns 1`] = `
   Review notes
   Prompt-injection text detected at src/price.ts:1. Treated as repository data, not reviewer instructions.
 
-  Report  .air-review/summary.md
-  Memory  .air-review/context.md
+  Summary     .air-review/summary.md
+  Memory      .air-review/context.md
   Saved locally. No pull-request comments published (dry-run).
 "
 `;

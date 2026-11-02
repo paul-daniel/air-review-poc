@@ -45,11 +45,12 @@ export interface ScmAdapter {
   createInlineFinding(finding: Finding): Promise<ThreadRef>;
   updateFinding(ref: ThreadRef, finding: Finding): Promise<void>;
   resolveFinding(ref: ThreadRef): Promise<void>;
-  upsertSummary(summary: ReviewSummary): Promise<void>;
+  /** Create or update the single summary comment; `findings` is the ledger's current state (for the table). */
+  upsertSummary(summary: ReviewSummary, findings?: Finding[]): Promise<void>;
   /**
-   * Optional: register the reviewing identity as a reviewer of the pull
-   * request and cast its vote from the summary (approve when nothing is open,
-   * wait-for-author while blocking findings remain). Never merges.
+   * Optional: act as a real reviewer of the pull request by casting the
+   * summary's verdict (approve, approve with suggestions, request changes).
+   * Never merges.
    */
   castVote?(summary: ReviewSummary): Promise<void>;
 }

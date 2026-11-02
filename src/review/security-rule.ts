@@ -17,6 +17,7 @@ export const secretRule: DeterministicRule = {
       severity: "BLOCKER",
       confidence: 0.98,
       scope: "IN_PR",
+      category: "security",
       title: `Possible ${secret.kind} committed in source`,
       summary:
         `A value matching the "${secret.kind}" secret pattern was added on line ${secret.line}. ` +

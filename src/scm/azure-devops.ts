@@ -1,13 +1,24 @@
 /**
- * Azure DevOps (Azure Repos) pull-request adapter.
+ * Azure DevOps (Azure Repos) pull-request adapter: air-review as a real reviewer.
  *
  * Review memory lives in pull-request threads, so nothing has to exist outside
  * the customer's repository platform:
  *
  *   - one "state" thread (status `closed`, collapsed) whose first comment is the
  *     machine-readable `air-review:state` envelope,
- *   - one "summary" thread (`active` while the gate fails, `closed` once it passes),
+ *   - one "summary" thread (`active` while findings are open, `fixed` once all
+ *     were resolved, `closed` when there was nothing to report),
  *   - one inline thread per finding, anchored on the right (head) side of the file.
+ *
+ * Every comment carries a hidden marker. Before creating anything the adapter
+ * looks for the marker in the existing threads, so a lost ledger, a re-run or a
+ * second identity never produces a duplicate thread: the existing one is
+ * updated or replied to instead.
+ *
+ * After publishing, the adapter registers the reviewing identity as a reviewer
+ * and casts the verdict as a vote (10 approved, 5 approved with suggestions,
+ * -5 waiting for author), and can post a pull-request status usable by a
+ * "Status" branch policy. It never completes or merges the pull request.
  *
  * All endpoints below are from the Azure DevOps Git REST reference, api-version 7.1:
  * https://learn.microsoft.com/en-us/rest/api/azure/devops/git/
@@ -20,7 +31,7 @@ import type { GitRepository } from "../context/repository.js";
 import { parseUnifiedDiff } from "../context/diff.js";
 import { STATE_MARKER_OPEN } from "../state/ledger.js";
 import { SUMMARY_MARKER_OPEN, upsertSummaryBody } from "../state/summary.js";
-import { renderFindingComment } from "../state/finding-comment.js";
+import { findingMarker, renderFindingComment } from "../state/finding-comment.js";
 import {
   AzureDevOpsClient,
   AzureDevOpsHttpError,
@@ -30,6 +41,12 @@ import {
 export interface AzureDevOpsAdapterOptions extends AzureDevOpsClientOptions {
   /** Local checkout used for the diff (the pipeline agent has the repo with `fetchDepth: 0`). */
   git: GitRepository;
+  /** Cast the reviewer vote after publishing (default true). */
+  vote?: boolean;
+  /** Post a pull-request status (`genre/name`) with the gate result (default off). */
+  status?: { enabled: boolean; genre: string; name: string };
+  /** Build URL shown on the status, e.g. the pipeline run. */
+  statusTargetUrl?: string;
 }
 
 /** Subset of `GitPullRequest` (Pull Requests - Get Pull Request). */
@@ -59,6 +76,7 @@ interface AdoThread {
   status?: string;
   isDeleted?: boolean;
   comments?: AdoComment[];
+  threadContext?: { filePath?: string } | null;
 }
 
 /** Request body for a new thread (Pull Request Threads - Create). */
@@ -72,10 +90,35 @@ interface AdoNewThread {
   };
 }
 
+/** Reviewer vote values (Pull Request Reviewers - Create Pull Request Reviewer, `vote`). */
+export const ADO_VOTE = {
+  approved: 10,
+  approvedWithSuggestions: 5,
+  noVote: 0,
+  waitingForAuthor: -5,
+  rejected: -10,
+} as const;
+
+/** Verdict → vote. `comment` keeps the reviewer registered without a vote. */
+export function voteForVerdict(verdict: ReviewSummary["verdict"]): number {
+  switch (verdict) {
+    case "approve":
+      return ADO_VOTE.approved;
+    case "approve-with-suggestions":
+      return ADO_VOTE.approvedWithSuggestions;
+    case "request-changes":
+      return ADO_VOTE.waitingForAuthor;
+    default:
+      return ADO_VOTE.noVote;
+  }
+}
+
 export class AzureDevOpsAdapter implements ScmAdapter {
   readonly kind = "azure-devops" as const;
   private readonly client: AzureDevOpsClient;
   private snapshot: PullRequestSnapshot | null = null;
+  /** Thread list cache for one publish pass (invalidated after every write). */
+  private threadCache: AdoThread[] | null = null;
   /** Azure DevOps rejects unauthenticated calls; exposed for `doctor`. */
   readonly authenticated: boolean;
 
@@ -95,7 +138,9 @@ export class AzureDevOpsAdapter implements ScmAdapter {
     } catch (error) {
       throw new ScmError(
         `Could not read pull request !${this.options.pullRequestId}: ${(error as Error).message}`,
-        { cause: error },
+        {
+          cause: error,
+        },
       );
     }
     const baseSha = data.lastMergeTargetCommit?.commitId;
@@ -145,14 +190,20 @@ export class AzureDevOpsAdapter implements ScmAdapter {
    * https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-threads/list?view=azure-devops-rest-7.1
    */
   private async threads(): Promise<AdoThread[]> {
+    if (this.threadCache) return this.threadCache;
     try {
       const all = await this.client.list<AdoThread>("/threads");
-      return all.filter((thread) => !thread.isDeleted);
+      this.threadCache = all.filter((thread) => !thread.isDeleted);
+      return this.threadCache;
     } catch (error) {
       throw new ScmError(`Could not list pull request threads: ${(error as Error).message}`, {
         cause: error,
       });
     }
+  }
+
+  private invalidate(): void {
+    this.threadCache = null;
   }
 
   /** The first live comment of a thread is where air-review keeps its markers. */
@@ -199,6 +250,7 @@ export class AzureDevOpsAdapter implements ScmAdapter {
    */
   private async createThread(body: AdoNewThread): Promise<{ threadId: number; commentId: number }> {
     const created = await this.client.request<AdoThread>("POST", "/threads", body);
+    this.invalidate();
     const commentId = AzureDevOpsAdapter.firstComment(created)?.id ?? 1;
     return { threadId: created.id, commentId };
   }
@@ -209,6 +261,7 @@ export class AzureDevOpsAdapter implements ScmAdapter {
    */
   private async updateComment(threadId: number, commentId: number, content: string): Promise<void> {
     await this.client.request("PATCH", `/threads/${threadId}/comments/${commentId}`, { content });
+    this.invalidate();
   }
 
   /**
@@ -217,6 +270,7 @@ export class AzureDevOpsAdapter implements ScmAdapter {
    */
   private async setThreadStatus(threadId: number, status: AdoThreadStatus): Promise<void> {
     await this.client.request("PATCH", `/threads/${threadId}`, { status });
+    this.invalidate();
   }
 
   /**
@@ -229,6 +283,7 @@ export class AzureDevOpsAdapter implements ScmAdapter {
       parentCommentId,
       commentType: "text",
     });
+    this.invalidate();
   }
 
   async listState(): Promise<string | null> {
@@ -262,8 +317,29 @@ export class AzureDevOpsAdapter implements ScmAdapter {
     }
   }
 
+  /**
+   * One thread per finding, never two: if a thread already carries this
+   * finding's marker (ledger lost, manual re-run, earlier identity), it is
+   * updated and reactivated instead of being created again.
+   */
   async createInlineFinding(finding: Finding): Promise<ThreadRef> {
     if (!this.snapshot) throw new ScmError("Pull request snapshot not loaded");
+    const existing = await this.findByMarker(findingMarker(finding.id));
+    if (existing) {
+      const ref = {
+        platform: "azure-devops" as const,
+        id: threadRefId(existing.thread.id, existing.comment.id),
+      };
+      await this.updateFinding(ref, finding);
+      if (existing.thread.status && existing.thread.status !== "active") {
+        try {
+          await this.setThreadStatus(existing.thread.id, "active");
+        } catch {
+          /* status change refused: the updated content still stands */
+        }
+      }
+      return ref;
+    }
     try {
       const { threadId, commentId } = await this.createThread({
         comments: [{ parentCommentId: 0, content: renderFindingComment(finding), commentType: "text" }],
@@ -278,8 +354,7 @@ export class AzureDevOpsAdapter implements ScmAdapter {
       return { platform: "azure-devops", id: threadRefId(threadId, commentId) };
     } catch (error) {
       throw new ScmError(
-        `Could not publish finding ${finding.id} at ${finding.anchor.file}:${finding.anchor.startLine}: ` +
-          `${(error as Error).message}`,
+        `Could not publish finding ${finding.id} at ${finding.anchor.file}:${finding.anchor.startLine}: ${(error as Error).message}`,
         { cause: error },
       );
     }
@@ -299,6 +374,13 @@ export class AzureDevOpsAdapter implements ScmAdapter {
           commentId,
           `**Updated on ${this.snapshot?.headSha.slice(0, 8) ?? "the current head"}**\n\n${content}`,
         );
+      }
+      if (finding.status === "REOPENED") {
+        try {
+          await this.setThreadStatus(threadId, "active");
+        } catch {
+          /* best effort */
+        }
       }
     } catch (error) {
       throw new ScmError(`Could not update finding ${finding.id}: ${(error as Error).message}`, {
@@ -324,9 +406,10 @@ export class AzureDevOpsAdapter implements ScmAdapter {
     }
   }
 
-  async upsertSummary(summary: ReviewSummary): Promise<void> {
+  async upsertSummary(summary: ReviewSummary, findings: Finding[] = []): Promise<void> {
     const existing = await this.findByMarker(SUMMARY_MARKER_OPEN);
-    const body = upsertSummaryBody(existing?.comment.content ?? "", summary);
+    // Azure DevOps does not render Mermaid: the diagram is shown as source.
+    const body = upsertSummaryBody(existing?.comment.content ?? "", summary, { findings, mermaid: false });
     // Active while findings are open; "fixed" once every finding was resolved (the
     // team sees the review as settled); "closed" when there was nothing to report.
     const status: AdoThreadStatus = summary.open > 0 ? "active" : summary.resolved > 0 ? "fixed" : "closed";
@@ -353,31 +436,59 @@ export class AzureDevOpsAdapter implements ScmAdapter {
   }
 
   /**
-   * Register the reviewing identity (the PAT's user, or the pipeline's build
-   * service) as a reviewer and vote:
-   *   10 approved         - no finding is open any more
-   *   -5 waiting for author - blocking findings remain (the gate failed)
-   *    0 no vote          - open findings, none blocking
+   * Act as a reviewer: register the reviewing identity (the PAT's user, or the
+   * pipeline's build service) and cast the verdict as a vote:
+   *   10  approved                  - nothing open
+   *    5  approved with suggestions - open findings, none blocking
+   *   -5  waiting for author        - blocking findings (the gate failed)
+   *    0  no vote                   - incomplete review (never vote on partial data)
+   * Optionally posts a pull-request status for a "Status" branch policy.
    * The vote never completes or merges the pull request.
    *
    * GET  {org}/_apis/connectionData                       -> authenticatedUser.id
-   * PUT  .../pullRequests/{id}/reviewers/{reviewerId}     body { vote }
+   * PUT  .../pullRequests/{id}/reviewers/{reviewerId}     body { vote, id }
    * https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-reviewers/create-pull-request-reviewer?view=azure-devops-rest-7.1
+   * POST .../pullRequests/{id}/statuses                   body { state, context, description }
+   * https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-statuses/create?view=azure-devops-rest-7.1
    */
   async castVote(summary: ReviewSummary): Promise<void> {
-    const vote = summary.open === 0 ? 10 : summary.gatePassed ? 0 : -5;
-    try {
-      const me = await this.client.requestOrg<{ authenticatedUser?: { id?: string } }>(
-        "GET",
-        "/_apis/connectionData",
-        undefined,
-        "7.1-preview.1", // connectionData is a preview resource and rejects a plain "7.1"
-      );
-      const reviewerId = me.authenticatedUser?.id;
-      if (!reviewerId) throw new ScmError("connectionData did not return the authenticated user");
-      await this.client.request("PUT", `/reviewers/${reviewerId}`, { vote, id: reviewerId });
-    } catch (error) {
-      throw new ScmError(`Could not vote on the pull request: ${(error as Error).message}`, { cause: error });
+    if (this.options.vote !== false) {
+      const vote = voteForVerdict(summary.verdict);
+      try {
+        const me = await this.client.requestOrg<{ authenticatedUser?: { id?: string } }>(
+          "GET",
+          "/_apis/connectionData",
+          undefined,
+          "7.1-preview.1", // connectionData is a preview resource and rejects a plain "7.1"
+        );
+        const reviewerId = me.authenticatedUser?.id;
+        if (!reviewerId) throw new ScmError("connectionData did not return the authenticated user");
+        await this.client.request("PUT", `/reviewers/${reviewerId}`, { vote, id: reviewerId });
+      } catch (error) {
+        throw new ScmError(`Could not vote on the pull request: ${(error as Error).message}`, {
+          cause: error,
+        });
+      }
+    }
+    if (this.options.status?.enabled) {
+      const state = summary.metrics.incomplete ? "error" : summary.gatePassed ? "succeeded" : "failed";
+      const description = summary.metrics.incomplete
+        ? "air-review could not complete (model error)"
+        : summary.gatePassed
+          ? `air-review: gate passed (${summary.open} open, none blocking)`
+          : `air-review: ${summary.open} open finding(s), blocking issues must be fixed`;
+      try {
+        await this.client.request("POST", "/statuses", {
+          state,
+          description,
+          context: { genre: this.options.status.genre, name: this.options.status.name },
+          ...(this.options.statusTargetUrl ? { targetUrl: this.options.statusTargetUrl } : {}),
+        });
+      } catch (error) {
+        throw new ScmError(`Could not post the pull request status: ${(error as Error).message}`, {
+          cause: error,
+        });
+      }
     }
   }
 }
