@@ -33,6 +33,7 @@ async function reviewFlow(
 ): Promise<void> {
   const overrides = {
     model: options.model as string | undefined,
+    triage: options.triageModel as string | undefined,
     planner: options.plannerModel as string | undefined,
     reviewer: options.reviewerModel as string | undefined,
     verifier: options.verifierModel as string | undefined,
@@ -57,6 +58,7 @@ async function reviewFlow(
     deterministicOnly: Boolean(options.deterministicOnly),
     noVerifier: options.verifier === false,
     noCache: options.cache === false,
+    tier: options.tier as "light" | "standard" | "heavy" | undefined,
     base: options.base as string | undefined,
     owner: options.owner as string | undefined,
     repo: options.repo as string | undefined,
@@ -86,9 +88,17 @@ function addScmOptions(command: Command): Command {
 function addReviewOptions(command: Command): Command {
   return addScmOptions(command)
     .option("--model <model>", "override the reviewer model")
+    .option("--triage-model <model>", "override the triage model")
     .option("--planner-model <model>", "override the planner model")
     .option("--reviewer-model <model>", "override the reviewer model")
     .option("--verifier-model <model>", "override the verifier model")
+    .addOption(
+      new Option("--tier <tier>", "force the complexity tier instead of letting triage decide").choices([
+        "light",
+        "standard",
+        "heavy",
+      ]),
+    )
     .option("--deterministic-only", "run structural rules without any model call")
     .option("--no-verifier", "skip the LLM verification pass (deterministic checks stay)")
     .option("--no-cache", "disable the local result cache")
@@ -135,6 +145,7 @@ export function buildProgram(): Command {
         "",
         "Docs: README.md · docs/commands.md · docs/providers.md · docs/configuration.md",
         "Exit codes: 0 ok · 10 gate failed · 20 config · 30 model · 40 scm · 50 internal",
+        "Reports: .air-review/reports/<run>.md (cost per step, routing, workflow diagram)",
       ].join("\n"),
     );
 

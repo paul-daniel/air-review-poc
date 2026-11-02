@@ -6,6 +6,8 @@
  */
 
 import type { Usage } from "./model.js";
+import type { RoutingDecision } from "./routing.js";
+import type { RunTraceSummary } from "./trace.js";
 
 export const SEVERITIES = ["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"] as const;
 export type Severity = (typeof SEVERITIES)[number];
@@ -18,6 +20,23 @@ export type RuleOrigin = (typeof RULE_ORIGINS)[number];
 
 export const FINDING_STATUSES = ["OPEN", "RESOLVED", "REOPENED", "WONT_FIX"] as const;
 export type FindingStatus = (typeof FINDING_STATUSES)[number];
+
+/**
+ * What kind of problem a finding describes. Orthogonal to severity (how bad)
+ * and confidence (how sure): a reader scanning a pull request filters on it,
+ * which is why the main AI reviewers (CodeRabbit, Qodo) label every comment
+ * with one. See docs/review-format.md.
+ */
+export const FINDING_CATEGORIES = [
+  "correctness",
+  "security",
+  "performance",
+  "maintainability",
+  "consistency",
+  "tests",
+  "docs",
+] as const;
+export type FindingCategory = (typeof FINDING_CATEGORIES)[number];
 
 /** Stable location of a finding inside the head revision of a PR. */
 export interface FindingAnchor {
@@ -55,14 +74,21 @@ export interface Finding {
   /** Model confidence that the finding is real and actionable. 0..1. */
   confidence: number;
   scope: Scope;
+  /** Problem family; defaults to "correctness" when a rule does not say. */
+  category?: FindingCategory;
   /** How the repository compares to the rule: follows a healthy convention,
    *  carries existing debt, or has no established pattern yet. */
   repoStatus?: "CONVENTION" | "EXISTING_DEBT" | "NONE";
   title: string;
   summary: string;
   suggestion?: string;
-  /** Optional code example; data only, never terminal formatting or an automatically applied patch. */
-  suggestedCode?: { language: string; code: string };
+  /**
+   * Optional code example; data only, never terminal formatting or an
+   * automatically applied patch. `replacesAnchor` is true only when the code
+   * is an exact drop-in replacement of the anchored lines, which lets GitHub
+   * render it as a one-click committable suggestion.
+   */
+  suggestedCode?: { language: string; code: string; replacesAnchor?: boolean };
   anchor: FindingAnchor;
   evidence: EvidenceItem[];
   /** Content fingerprint used for incremental reconciliation. */
@@ -90,6 +116,7 @@ export interface RoleUsage extends Usage {
 }
 
 export interface RoleUsageMap {
+  triage: RoleUsage;
   planner: RoleUsage;
   reviewer: RoleUsage;
   verifier: RoleUsage;
@@ -110,12 +137,26 @@ export interface ReviewMetrics extends Usage {
   /** Estimated run cost, present only when telemetry.pricing covers the models. */
   estimatedCostUsd?: number;
   incomplete?: boolean;
+  /** Which reviewer agent was chosen and why. */
+  routing?: RoutingDecision;
+  /** Step-by-step trace: duration, agent, tokens and cost of every step taken. */
+  trace?: RunTraceSummary;
 }
+
+/** The review's verdict as a reviewer would cast it on the pull request. */
+export type ReviewVerdict = "approve" | "approve-with-suggestions" | "request-changes" | "comment";
 
 export interface ReviewSummary {
   pr: { owner: string; repo: string; number: number | null };
   reviewedHeadSha: string;
   gatePassed: boolean;
+  verdict: ReviewVerdict;
+  /** Short lifecycle events of this run ("resolved arf_1", "reopened arf_2"), newest last. */
+  events?: Array<{ event: string; findingId: string; detail?: string }>;
+  /** Mermaid flowchart of the path this run actually took (see telemetry/workflow-diagram.ts). */
+  workflowDiagram?: string;
+  /** Why the run did not review anything new (same head, docs-only push...). */
+  skippedReason?: string;
   counts: Record<Severity, number>;
   open: number;
   resolved: number;

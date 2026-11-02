@@ -1,4 +1,5 @@
 import type { ModelOverrides } from "../../model/router.js";
+import type { ComplexityTier } from "../../contracts/routing.js";
 import { requireRoleModels, type RoleModels } from "../../model/router.js";
 import type { CiMode } from "../../scm/detect.js";
 import { runReview, type ReviewOptions } from "../../review/pipeline.js";
@@ -15,6 +16,7 @@ export interface ReviewCliOptions {
   deterministicOnly: boolean;
   noVerifier: boolean;
   noCache: boolean;
+  tier?: ComplexityTier;
   base?: string;
   owner?: string;
   repo?: string;
@@ -28,7 +30,7 @@ export interface ReviewCliOptions {
 export async function runReviewCommand(ctx: CliContext, options: ReviewCliOptions): Promise<number> {
   const publish = options.dryRun ? false : (options.publish ?? ctx.config.platform.publish);
   const models: RoleModels = options.deterministicOnly
-    ? { planner: "(none)", reviewer: "(none)", verifier: "(none)" }
+    ? { triage: "(none)", planner: "(none)", reviewer: "(none)", verifier: "(none)" }
     : requireRoleModels(ctx.models);
 
   const spinner = new Spinner();
@@ -40,6 +42,7 @@ export async function runReviewCommand(ctx: CliContext, options: ReviewCliOption
     deterministicOnly: options.deterministicOnly,
     skipLlmVerifier: options.noVerifier,
     noCache: options.noCache,
+    tier: options.tier,
     base: options.base,
     owner: options.owner,
     repo: options.repo,
@@ -51,6 +54,9 @@ export async function runReviewCommand(ctx: CliContext, options: ReviewCliOption
       switch (event.phase) {
         case "analyze":
           spinner.start("Analyzing the change…");
+          break;
+        case "triage":
+          spinner.update(`Triaging complexity${event.detail ? ` with ${event.detail}` : ""}…`);
           break;
         case "review":
           spinner.update(`Reviewing with ${event.detail ?? "model"}…`);
@@ -92,8 +98,12 @@ export async function runReviewCommand(ctx: CliContext, options: ReviewCliOption
       published: outcome.published,
       gatePassed: outcome.summary.gatePassed,
       incomplete: outcome.incomplete,
+      verdict: outcome.summary.verdict,
       counts: outcome.summary.counts,
+      routing: outcome.summary.metrics.routing,
       metrics: outcome.summary.metrics,
+      workflowDiagram: outcome.summary.workflowDiagram,
+      report: outcome.report,
       warnings: outcome.warnings,
       findings: outcome.findings,
     });

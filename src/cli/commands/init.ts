@@ -17,7 +17,11 @@ export interface InitOptions {
   force: boolean;
 }
 
-const GENERIC_MODELS = { planner: "your-model", reviewer: "your-model", verifier: "your-model" };
+const GENERIC_MODELS: { planner: string; reviewer: string; verifier: string; triage?: string } = {
+  planner: "your-small-model",
+  reviewer: "your-strong-model",
+  verifier: "your-small-model",
+};
 
 export function renderInitConfig(options: InitOptions): string {
   const preset = PROVIDER_PRESETS[options.provider];
@@ -27,7 +31,8 @@ export function renderInitConfig(options: InitOptions): string {
     );
   }
 
-  const suggested = preset.models ?? GENERIC_MODELS;
+  const suggested: { planner: string; reviewer: string; verifier: string; triage?: string } =
+    preset.models ?? GENERIC_MODELS;
   const frameworks = options.frameworks
     .split(",")
     .map((framework) => framework.trim())
@@ -41,9 +46,25 @@ export function renderInitConfig(options: InitOptions): string {
     "  # provider offers (or at deployment names for Azure).",
     `  default: ${options.model ?? suggested.reviewer}`,
     "  roles:",
+    `    triage: ${options.plannerModel ?? suggested.triage ?? suggested.planner}`,
     `    planner: ${options.plannerModel ?? suggested.planner}`,
     `    reviewer: ${options.model ?? suggested.reviewer}`,
     `    verifier: ${options.verifierModel ?? suggested.verifier}`,
+    "  # Complexity tiers (see routing below): a cheaper reviewer for light changes,",
+    "  # a stronger one for heavy pull requests. Unset tiers use the standard role model.",
+    "  tiers:",
+    "    light:",
+    `      reviewer: ${options.verifierModel ?? suggested.verifier}`,
+    "    heavy:",
+    `      reviewer: ${options.model ?? suggested.reviewer}`,
+    "",
+    "# Routing by complexity: deterministic thresholds decide the clear cases and the",
+    "# triage model is consulted for the ambiguous middle band (mode: hybrid).",
+    "routing:",
+    "  enabled: true",
+    "  mode: hybrid",
+    "  light: { maxFiles: 3, maxLines: 150 }",
+    "  heavy: { minFiles: 10, minLines: 400, minModules: 3 }",
   ].join("\n");
 
   const endpointLines = ["endpoint:"];

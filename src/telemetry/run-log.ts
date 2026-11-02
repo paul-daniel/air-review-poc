@@ -12,6 +12,8 @@ export interface RunRecord {
   headSha: string;
   skipped: boolean;
   gatePassed: boolean;
+  verdict?: string;
+  routing?: { tier: string; reviewerModel: string; method: string };
   counts: Record<string, number>;
   findings: { open: number; resolved: number };
   usage: {
@@ -25,6 +27,16 @@ export interface RunRecord {
     reasoningTokens?: number;
     usageIncomplete?: boolean;
   };
+  /** Compact per-step trace (duration, model, tokens, cost). */
+  steps?: Array<{
+    id: string;
+    status: string;
+    durationMs: number;
+    model?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+    estimatedCostUsd?: number;
+  }>;
   incomplete?: boolean;
   durationMs: number;
   models: Record<string, string>;

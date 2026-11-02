@@ -21,6 +21,9 @@ export interface AirReviewState {
   runs: {
     lastCompleted: string;
     runId: string;
+    /** Routing of the last run that called a model: tier and reviewer actually used. */
+    routing?: { tier: string; reviewerModel: string; verifierModel: string; method: string };
+    verdict?: string;
   };
   findings: Finding[];
   /** Compact event journal: appeared / resolved / reopened / severity change. */

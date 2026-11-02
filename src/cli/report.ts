@@ -55,6 +55,39 @@ function reviewHeader(ui: TerminalLayout, outcome: ReviewOutcome, options: Repor
   if (outcome.skipped) ui.prose("No new API calls or charges. Use --force to review again.", ui.color.gray);
 }
 
+function routingSummary(ui: TerminalLayout, summary: ReviewSummary): void {
+  const routing = summary.metrics.routing;
+  if (!routing) return;
+  ui.section("Routing");
+  ui.prose(
+    `${routing.tier} tier${ui.separator}reviewer ${routing.reviewerModel}${ui.separator}verifier ${routing.verifierModel}${ui.separator}decided by ${routing.method === "model" ? `triage model ${routing.triageModel ?? ""}` : routing.method}`,
+    ui.color.bold,
+  );
+  for (const reason of routing.reasons.slice(0, 4)) ui.prose(`- ${reason}`, ui.color.gray);
+}
+
+function stepsSummary(ui: TerminalLayout, summary: ReviewSummary): void {
+  const trace = summary.metrics.trace;
+  if (!trace) return;
+  ui.section("Steps");
+  for (const step of trace.steps) {
+    const status = step.status === "done" ? "" : ` [${step.status}]`;
+    const model = step.model ? `${ui.separator}${step.model}` : "";
+    const time = step.status === "skipped" ? "" : `${ui.separator}${(step.durationMs / 1000).toFixed(1)} s`;
+    const tokens =
+      step.inputTokens !== undefined || step.outputTokens !== undefined
+        ? `${ui.separator}${step.inputTokens ?? 0} in / ${step.outputTokens ?? 0} out`
+        : "";
+    const cost =
+      step.estimatedCostUsd !== undefined ? `${ui.separator}${formatCost(step.estimatedCostUsd)}` : "";
+    ui.prose(
+      `${step.label}${status}${model}${time}${tokens}${cost}`,
+      step.status === "skipped" ? ui.color.gray : (value) => value,
+    );
+    if (step.detail && step.status !== "skipped") ui.prose(`  ${step.detail}`, ui.color.gray);
+  }
+}
+
 function usageSummary(ui: TerminalLayout, summary: ReviewSummary): void {
   const m = summary.metrics;
   const count = (value?: number) => (value === undefined ? "not reported" : value.toLocaleString("en-US"));
@@ -102,9 +135,10 @@ function reviewNotes(ui: TerminalLayout, outcome: ReviewOutcome): void {
 
 function reportFooter(ui: TerminalLayout, outcome: ReviewOutcome, options: ReportOptions): void {
   ui.space();
+  if (outcome.report) ui.prose(`Run report  ${relativeToCwd(outcome.report.markdown)}`, ui.color.cyan);
   if (options.local) {
-    ui.prose("Report  .air-review/summary.md", ui.color.cyan);
-    ui.prose("Memory  .air-review/context.md", ui.color.gray);
+    ui.prose("Summary     .air-review/summary.md", ui.color.cyan);
+    ui.prose("Memory      .air-review/context.md", ui.color.gray);
     ui.prose(
       outcome.incomplete
         ? "Review incomplete; previous memory was kept. Fix the API error and rerun."
@@ -123,6 +157,11 @@ function reportFooter(ui: TerminalLayout, outcome: ReviewOutcome, options: Repor
   }
 }
 
+function relativeToCwd(path: string): string {
+  const cwd = process.cwd().replace(/\/+$/, "") + "/";
+  return path.startsWith(cwd) ? path.slice(cwd.length) : path;
+}
+
 /** All presentation is deterministic; review data remains unchanged. */
 export function renderReviewReport(outcome: ReviewOutcome, options: ReportOptions = {}): string {
   const ui = new TerminalLayout(options);
@@ -132,6 +171,8 @@ export function renderReviewReport(outcome: ReviewOutcome, options: ReportOption
     ui.space();
     ui.lines.push(...renderFinding(finding, { ...options, index: index + 1 }));
   }
+  routingSummary(ui, outcome.summary);
+  stepsSummary(ui, outcome.summary);
   usageSummary(ui, outcome.summary);
   reviewNotes(ui, outcome);
   reportFooter(ui, outcome, options);
