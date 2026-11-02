@@ -123,7 +123,7 @@ export async function runDoctor(ctx: CliContext, json: boolean): Promise<number>
           ? {
               name: ctx.provider.id,
               status: "ok",
-              detail: `probed ${probes.length} deployment(s): ${probes.map((p) => `${p.model} ${p.durationMs} ms`).join(", ")} · ~${tokens} tokens`,
+              detail: `probed ${probes.length} deployment(s): ${probes.map((p) => `${p.model} ${p.durationMs} ms${p.note ? " (reasoning)" : ""}`).join(", ")} · ~${tokens} tokens`,
             }
           : {
               name: ctx.provider.id,

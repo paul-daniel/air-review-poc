@@ -9,6 +9,8 @@ export interface ProbeResult {
   inputTokens?: number;
   outputTokens?: number;
   error?: string;
+  /** Set when the deployment answered but spent the probe budget on hidden reasoning. */
+  note?: string;
 }
 
 /**
@@ -31,7 +33,9 @@ export async function probeModel(provider: ModelProvider, model: string): Promis
     const result = await provider.generate({
       model,
       messages: [{ role: "user", content: "Reply with the single word: ready" }],
-      maxOutputTokens: 16,
+      // Reasoning deployments (gpt-5-codex, o-series) spend output tokens on
+      // hidden reasoning first; 128 leaves room for the one-word answer.
+      maxOutputTokens: 128,
     });
     return {
       model,
@@ -41,6 +45,18 @@ export async function probeModel(provider: ModelProvider, model: string): Promis
       outputTokens: result.usage.outputTokens,
     };
   } catch (error) {
-    return { model, ok: false, durationMs: Date.now() - startedAt, error: (error as Error).message };
+    const message = (error as Error).message;
+    // The endpoint authenticated the request, found the deployment and billed
+    // tokens: that proves reachability even when a reasoning model used the
+    // whole budget before answering.
+    if (/status "incomplete"/.test(message)) {
+      return {
+        model,
+        ok: true,
+        durationMs: Date.now() - startedAt,
+        note: "reachable; reasoning model spent the probe budget before answering",
+      };
+    }
+    return { model, ok: false, durationMs: Date.now() - startedAt, error: message };
   }
 }
