@@ -6,6 +6,7 @@
  */
 
 import type { Finding } from "./review.js";
+import { TOOL } from "../version.js";
 
 export interface AirReviewState {
   schemaVersion: number;
@@ -50,7 +51,7 @@ export function emptyState(
 ): AirReviewState {
   return {
     schemaVersion: 1,
-    tool: { name: "air-review", version: "0.1.0" },
+    tool: { name: TOOL.name, version: TOOL.version },
     repository: { id: repoId },
     pullRequest: {
       number: pr.number,
