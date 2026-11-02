@@ -16,7 +16,7 @@ tout a été repackagé dedans et poussé :
 | Format de la revue           | Fait : étude CodeRabbit / Qodo-PR-Agent / Copilot, format choisi et justifié dans `docs/review-format.md`.                                                                                                                                                                       |
 | Observabilité                | Fait : trace par étape (durée, agent/modèle, tokens, coût), rapport `.air-review/reports/<run>.md                                                                                                                                                                                | json`, diagramme Mermaid du chemin réellement emprunté. |
 | Azure DevOps (vrai reviewer) | Fait dans le code et couvert par des tests unitaires (vote 10 / 5 / -5 selon le verdict, statut PR optionnel, dédoublonnage des fils par marqueur, revue incrémentale, cache). **Pas de run en réel** (voir §5). Pipeline YAML prêt à l'emploi : `examples/azure-pipelines.yml`. |
-| Dépôt de test                | Fait : monorepo Angular + API Node + lib partagée, six branches de scénario documentées (`scenarios/`).                                                                                                                                                                          |
+| Dépôt de test                | Fait : monorepo `atlas-shop` (167 fichiers, ~9 400 lignes : Angular 19 + API Node + lib partagée), six branches de scénario documentées et **exécutées** (hors ligne, et scénarios 03/06 en réel sur Foundry).                                                                   |
 | Documentation                | README, `docs/foundry.md`, `docs/review-format.md`, `docs/observability.md`, `docs/azure-devops.md`, `docs/architecture.md`, `docs/configuration.md`, sources citées.                                                                                                            |
 | Tests                        | 32 fichiers, 229 tests unitaires verts (`npm test`), smoke test de bout en bout hors ligne vert (`npm run test:e2e`), lint et typage verts.                                                                                                                                      |
 
@@ -141,7 +141,17 @@ dépôt), `libs/shared` (modèles, monnaie, remises). Six branches de scénario 
 | `scenario/06-defects`               | secret (BLOCKER, déterministe), fuite d'abonnement (MAJOR, déterministe), composant hors convention (MAJOR), bug pourcentage/fraction (modèle), injection de prompt ignorée → « en attente de l'auteur », exit 10 |
 
 Les scénarios sont exécutables hors ligne (`provider: mock`, script
-`scripts/review-scenarios.sh`) et en réel sur Foundry.
+`scripts/review-scenarios.sh`) et en réel sur Foundry. Résultats observés le
+3 novembre (détail dans `scenarios/README.md` du dépôt de test) :
+
+| Scénario                 | Hors ligne (mock)                                          | En réel (Foundry)                                                                                                                                                                                                                                                                                              |
+| ------------------------ | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 01 traduction            | light, 1 appel, approuvé                                   | –                                                                                                                                                                                                                                                                                                              |
+| 02 classification        | light, 1 appel, approuvé                                   | –                                                                                                                                                                                                                                                                                                              |
+| 03 feature multi-modules | heavy, approuvé                                            | heavy (36 fichiers, 1 801 lignes, 3 modules), 2 appels, 74,6 s, ~0,14 $, approuvé avec suggestions : 2 findings du modèle à confiance 0,70 (non bloquants) sur `returns.service.ts`, non plantés, laissés dans la branche                                                                                      |
+| 04 re-push docs          | « rien de nouveau », 0 appel, verdict conservé             | –                                                                                                                                                                                                                                                                                                              |
+| 05 refactor propre       | standard, approuvé, 0 finding                              | –                                                                                                                                                                                                                                                                                                              |
+| 06 défauts plantés       | standard, modifications demandées (3 règles déterministes) | standard choisi par le modèle de triage (conf. 0,9), 3 appels, 79,8 s, ~0,10 $ : BLOCKER secret, **CRITICAL « pourcentage utilisé comme multiplicateur absolu » (modèle, conf. 0,90)**, MAJOR container/presenter, MAJOR abonnement ; injection signalée et ignorée ; 2 doublons du modèle supprimés ; vote −5 |
 
 ### 2.7 Documentation
 
@@ -188,7 +198,10 @@ pour ce rapport.
 | `dry-run`                      | light / `airreview-planning-mini` (gpt-4.1-mini) | 2      | 5,2 s  | ~0,002 $    | fuite d'abonnement (déterministe) + 1 finding modèle, injection ignorée, approuvé avec suggestions                 |
 | `dry-run --tier heavy --force` | heavy / `airreview-review-codex` (gpt-5-codex)   | 2      | 14,1 s | ~0,016 $    | bug « pourcentage traité comme fraction » trouvé (MAJOR), doublon du modèle supprimé par le vérifieur déterministe |
 
-Le rapport `.air-review/reports/<run>.md` et le diagramme ont été relus.
+| `dry-run --force` avec `AIR_REVIEW_ROUTING_MODE=model` | standard, décidé par le modèle de triage `airreview-critic-mini` (conf. 0,8) | 3 | 17 s | ~0,021 $ | le triage coûte ~0,0004 $ et justifie son choix (« abonnements réactifs, injection de dépendances ») |
+
+Plus les deux scénarios du dépôt de test (§2.6). Le rapport
+`.air-review/reports/<run>.md` et le diagramme ont été relus.
 Un défaut trouvé grâce à ce run : la sonde de `doctor` déclarait un
 déploiement à raisonnement (gpt-5-codex) en échec (budget de 16 tokens
 épuisé en raisonnement) — corrigé.
