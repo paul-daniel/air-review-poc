@@ -228,13 +228,22 @@ Pricing with model router: the `model` reported back is the underlying
 model, so `telemetry.pricing` must contain the underlying deployment names,
 not only `model-router`.
 
-## What could not be verified in this session
+## Verified live, and what was not
 
-No live Foundry call was made while writing this version: no credential or
-signed-in Azure CLI session was available. Path A was validated live in
-October 2026 against a Foundry resource (see [providers.md](providers.md));
-path B (`azure-foundry-agent`, `scripts/foundry/sync-agents.mjs`) was written
-from the official quickstart and REST reference quoted above and tested
-against a fake HTTP server only. The first real run should follow the
-start-up procedure with `doctor`, then `dry-run`, and compare the reported
-usage with the Foundry cost analysis page.
+Path A was exercised on 3 November 2026 against the resource
+`airreview-resource` (Sweden Central) with an Entra ID token from a signed-in
+Azure CLI (`az account get-access-token --scope https://ai.azure.com/.default`),
+on the demo corpus of `scripts/demo.mjs`:
+
+| Run                            | Tier / reviewer deployment                     | Calls | Duration | Estimated cost | Outcome                                                                                                |
+| ------------------------------ | ---------------------------------------------- | ----- | -------- | -------------- | ------------------------------------------------------------------------------------------------------ |
+| `doctor`                       | probes of three deployments                    | 3     | < 3 s    | ~70 tokens     | endpoint `…/openai/v1`, bearer credential, every deployment reachable (gpt-5-codex included)           |
+| `dry-run`                      | light / `airreview-planning-mini` (4.1-mini)   | 2     | 5.2 s    | ~$0.002        | deterministic subscription finding plus one model finding, prompt injection ignored                    |
+| `dry-run --tier heavy --force` | heavy / `airreview-review-codex` (gpt-5-codex) | 2     | 14.1 s   | ~$0.016        | percent-as-fraction discount bug found (MAJOR); a model duplicate of the deterministic finding dropped |
+
+Path B (`azure-foundry-agent`, `scripts/foundry/sync-agents.mjs`) was written
+from the official quickstart and REST reference quoted above and exercised
+with `--dry-run` and a fake HTTP server only: no Foundry project with agents
+existed in the resource. The first real run should follow the start-up
+procedure with `doctor`, then `dry-run`, and compare the reported usage with
+the Foundry cost analysis page.
