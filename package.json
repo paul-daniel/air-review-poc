@@ -1,6 +1,6 @@
 {
   "name": "air-review",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Contextual AI code review CLI with API-key providers, local review memory and per-role cost reporting.",
   "type": "module",
   "license": "MIT",
