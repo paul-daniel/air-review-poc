@@ -203,7 +203,10 @@ Create a personal access token with the **Code (Read & Write)** scope, then:
 
 ```bash
 export SYSTEM_ACCESSTOKEN=<pat>        # or AZURE_DEVOPS_EXT_PAT
-# Keyless alternative from a signed-in Azure CLI (token valid about an hour):
+# Keyless alternative from a signed-in Azure CLI (token valid about an hour). Works for
+# organizations connected to a Microsoft Entra tenant; an organization backed by a personal
+# Microsoft account answers such tokens with a redirect to the sign-in page (observed on
+# 2026-11-03), so use a PAT there.
 export AZURE_DEVOPS_ACCESS_TOKEN="$(az account get-access-token --resource 499b84ac-1321-427f-aa17-267ca6975798 --query accessToken -o tsv)"
 cd your-repo                           # a full clone (the diff is local)
 git fetch origin
