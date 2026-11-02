@@ -20,7 +20,7 @@ export interface ProviderPreset {
   note?: string;
   hidden?: boolean;
   /** Suggested role models, used by `init` when the names are unambiguous. */
-  models?: { planner: string; reviewer: string; verifier: string };
+  models?: { planner: string; reviewer: string; verifier: string; triage?: string };
 }
 
 export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
@@ -195,17 +195,34 @@ export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
     listModels: true,
     note: "Set endpoint.baseUrl to your gateway.",
   },
-  ollama: {
-    id: "ollama",
-    label: "Ollama (reserved)",
-    baseUrl: "http://127.0.0.1:11434",
-    apiKeyEnv: "OLLAMA_API_KEY",
+  "azure-foundry-agent": {
+    id: "azure-foundry-agent",
+    label: "Microsoft Foundry Agent Service (prompt agents)",
+    baseUrl: "https://<resource>.services.ai.azure.com/api/projects/<project>",
+    apiKeyEnv: "AIR_REVIEW_ACCESS_TOKEN",
     apiKeyHeader: "authorization",
     apiKeyPrefix: "Bearer ",
-    chatPath: "/api/chat",
-    modelsPath: "/api/tags",
+    chatPath: "/agents/{agent}/endpoint/protocols/openai/responses",
+    modelsPath: "/agents",
+    listModels: true,
+    docsUrl: "https://learn.microsoft.com/azure/foundry/agents/quickstarts/prompt-agent",
+    note:
+      "Role models are *agent names* created in the Foundry project (scripts/foundry/sync-agents.mjs " +
+      "creates one prompt agent per role from the tool's prompts). Set endpoint.baseUrl to the project " +
+      "endpoint https://<resource>.services.ai.azure.com/api/projects/<project> and authenticate with a " +
+      "Microsoft Entra ID token (scope https://ai.azure.com/.default) in AIR_REVIEW_ACCESS_TOKEN.",
+  },
+  mock: {
+    id: "mock",
+    label: "Mock provider (offline, free, deterministic)",
+    apiKeyHeader: "authorization",
+    apiKeyPrefix: "",
+    chatPath: "/chat/completions",
+    modelsPath: "/models",
     listModels: true,
     hidden: true,
+    note: "No network. Reviewer findings come from `// air-review:expect` markers in the diff; for tests and demos.",
+    models: { planner: "mock-small", reviewer: "mock-large", verifier: "mock-small" },
   },
 };
 

@@ -3,16 +3,23 @@ import { VERSION } from "../version.js";
 import type { AirReviewConfig } from "./schema.js";
 import type { RoleModels } from "../model/router.js";
 
-/** Hash of the effective review configuration, used for cache/incremental keys. */
+/**
+ * Hash of the effective review configuration, used for cache/incremental keys.
+ * `resolvedModels` are the *configured* role models (standard tier), not the
+ * ones a particular run was routed to: a light follow-up push must still be
+ * reviewed incrementally against a heavy first review.
+ */
 export function configHash(config: AirReviewConfig, resolvedModels: RoleModels): string {
   const canonical = JSON.stringify({
     version: VERSION,
     frameworks: config.frameworks,
     provider: config.provider,
     models: resolvedModels,
+    tiers: config.models.tiers,
+    routing: config.routing,
     endpoint: {
-      baseUrl: config.endpoint.baseUrl ?? config.openai.baseUrl ?? config.ollama.baseUrl,
-      chatPath: config.endpoint.chatPath ?? config.openai.chatPath,
+      baseUrl: config.endpoint.baseUrl,
+      chatPath: config.endpoint.chatPath,
       api: config.endpoint.api,
       temperature: config.endpoint.temperature,
       maxTokensParameter: config.endpoint.maxTokensParameter,

@@ -41,48 +41,11 @@ const endpointSchema = z.object({
   headers: z.record(z.string()).default({}),
 });
 
-const ollamaSchema = z.object({
-  baseUrl: z.string().url().default("http://127.0.0.1:11434"),
-  timeoutMs: z.number().int().positive().default(180_000),
-  numCtx: z.number().int().positive().optional(),
-  keepAlive: z.union([z.string(), z.number()]).optional(),
-  /** Bearer token for authenticated/remote Ollama (e.g. Ollama Cloud). */
-  apiKeyEnv: z.string().optional(),
-  /** Extra headers (proxies, gateways). */
-  headers: z.record(z.string()).default({}),
-});
-
-const openaiSchema = z.object({
-  baseUrl: z.string().url().optional(),
-  apiKeyEnv: z.string().optional(),
-  /** Direct key value; prefer apiKeyEnv so secrets stay in the environment. */
-  apiKey: z.string().optional(),
-  /** Header used to carry the key: "authorization" (default) or "api-key" (Azure). */
-  apiKeyHeader: z.string().optional(),
-  /** Prefix for the key value: "Bearer " (default) or "" (Azure). */
-  apiKeyPrefix: z.string().optional(),
-  /** Chat completion path; override for deployment-style URLs (Azure OpenAI). */
-  chatPath: z.string().optional(),
-  /** Model listing path; ignored when listModels is false. */
-  modelsPath: z.string().optional(),
-  /** Some endpoints (Azure OpenAI) do not expose a compatible /models route. */
-  listModels: z.boolean().optional(),
-  headers: z.record(z.string()).default({}),
-});
-
-const featuresSchema = z.object({
-  /**
-   * Reserved, unsupported for now. The local-model provider stays behind this
-   * flag so it is not reachable from normal configuration.
-   */
-  ollama: z.boolean().default(false),
-});
-
 const telemetrySchema = z.object({
   /** Append one JSON line per run to this file. */
   log: z.string().default(".air-review/telemetry.jsonl"),
   enabled: z.boolean().default(true),
-  /** Optional prices in USD per 1M tokens, keyed by model name. */
+  /** Optional prices in USD per 1M tokens, keyed by model / deployment / agent name. */
   pricing: z
     .record(
       z.object({
@@ -94,15 +57,68 @@ const telemetrySchema = z.object({
     .default({}),
 });
 
+/** One model per logical agent role; missing roles fall back to `models.default`. */
+const roleModelsSchema = z.object({
+  triage: z.string().optional(),
+  planner: z.string().optional(),
+  reviewer: z.string().optional(),
+  verifier: z.string().optional(),
+});
+
+const tierModelsSchema = z.object({
+  reviewer: z.string().optional(),
+  verifier: z.string().optional(),
+});
+
 const modelsSchema = z.object({
   default: z.string().optional(),
-  roles: z
+  roles: roleModelsSchema.default({}),
+  /**
+   * Models used instead of `roles.reviewer` / `roles.verifier` when the triage
+   * step classifies the change as light (cheap model) or heavy (strong model).
+   * A tier without a model falls back to the standard role model.
+   */
+  tiers: z
     .object({
-      planner: z.string().optional(),
-      reviewer: z.string().optional(),
-      verifier: z.string().optional(),
+      light: tierModelsSchema.default({}),
+      heavy: tierModelsSchema.default({}),
     })
     .default({}),
+});
+
+/**
+ * Complexity routing. Thresholds are counts over the reviewed delta (files,
+ * added+removed lines, top-level modules). `mode`:
+ *   - deterministic: thresholds decide, no triage model call;
+ *   - hybrid (default): thresholds decide the clear cases, the triage model is
+ *     consulted for the ambiguous middle band when `models.roles.triage` is set;
+ *   - model: the triage model decides every time (thresholds are shown to it as a hint).
+ */
+const routingSchema = z.object({
+  enabled: z.boolean().default(true),
+  mode: z.enum(["deterministic", "hybrid", "model"]).default("hybrid"),
+  light: z
+    .object({
+      maxFiles: z.number().int().min(1).default(3),
+      maxLines: z.number().int().min(1).default(150),
+    })
+    .default({}),
+  heavy: z
+    .object({
+      minFiles: z.number().int().min(1).default(10),
+      minLines: z.number().int().min(1).default(400),
+      minModules: z.number().int().min(1).default(3),
+    })
+    .default({}),
+});
+
+const observabilitySchema = z.object({
+  /** Per-run Markdown + JSON report with cost per step and the workflow diagram. */
+  reportDir: z.string().default(".air-review/reports"),
+  /** Generate the Mermaid workflow diagram of the path actually taken. */
+  diagram: z.boolean().default(true),
+  /** Include the cost table and diagram in the pull-request summary comment. */
+  publishInSummary: z.boolean().default(true),
 });
 
 const contextSchema = z.object({
@@ -132,6 +148,14 @@ const reviewSchema = z.object({
    * cents while leaving room for the findings JSON.
    */
   maxOutputTokens: z.number().int().min(1_000).max(128_000).default(16_384),
+  /**
+   * File kinds (see review/triage.ts changeKindOf) that never justify a model
+   * call on their own: a push that only touches these is "nothing new to
+   * review" for the agents. Deterministic rules (secret scanning) still run.
+   */
+  modelSkipKinds: z
+    .array(z.enum(["translation", "docs", "data", "config", "tests", "binary"]))
+    .default(["docs", "binary"]),
 });
 
 const memorySchema = z.object({
@@ -171,6 +195,25 @@ const platformSchema = z.object({
       tokenEnv: z.string().default("SYSTEM_ACCESSTOKEN"),
       /** REST api-version the adapter was written against. */
       apiVersion: z.string().default("7.1"),
+      /**
+       * Reviewer vote cast after publishing: 10 approved when nothing is open,
+       * 5 approved-with-suggestions when only non-blocking findings remain,
+       * -5 waiting-for-author when the gate fails. Never merges.
+       */
+      vote: z
+        .object({
+          enabled: z.boolean().default(true),
+          approveWithSuggestions: z.boolean().default(true),
+        })
+        .default({}),
+      /** Optional pull-request status (`air-review/gate`) usable by a "Status" branch policy. */
+      status: z
+        .object({
+          enabled: z.boolean().default(false),
+          genre: z.string().default("air-review"),
+          name: z.string().default("gate"),
+        })
+        .default({}),
     })
     .default({}),
   local: z
@@ -187,9 +230,8 @@ export const configSchema = z
     provider: PROVIDER_KIND.default("openai"),
     endpoint: endpointSchema.default({}),
     models: modelsSchema.default({}),
-    ollama: ollamaSchema.default({}),
-    openai: openaiSchema.default({}),
-    features: featuresSchema.default({}),
+    routing: routingSchema.default({}),
+    observability: observabilitySchema.default({}),
     telemetry: telemetrySchema.default({}),
     context: contextSchema.default({}),
     review: reviewSchema.default({}),

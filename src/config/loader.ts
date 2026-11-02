@@ -65,8 +65,9 @@ function discoverConfig(explicitPath?: string): string | null {
 
 /**
  * Apply documented environment overrides on top of the file config:
- * AIR_REVIEW_PROVIDER, AIR_REVIEW_MODEL[_PLANNER|_REVIEWER|_VERIFIER],
- * OLLAMA_HOST, AIR_REVIEW_OPENAI_BASE_URL, GITHUB_TOKEN (read later).
+ * AIR_REVIEW_PROVIDER, AIR_REVIEW_MODEL[_TRIAGE|_PLANNER|_REVIEWER|_VERIFIER],
+ * AIR_REVIEW_MODEL_{REVIEWER,VERIFIER}_{LIGHT,HEAVY}, AIR_REVIEW_ROUTING_MODE,
+ * AIR_REVIEW_BASE_URL, AIR_REVIEW_API_KEY, AIR_REVIEW_ACCESS_TOKEN, AIR_REVIEW_PRICING.
  */
 export function applyEnvOverrides(config: AirReviewConfig): AirReviewConfig {
   const next = structuredClone(config);
@@ -77,12 +78,29 @@ export function applyEnvOverrides(config: AirReviewConfig): AirReviewConfig {
   if (process.env.AIR_REVIEW_MODEL) {
     next.models.roles.reviewer = process.env.AIR_REVIEW_MODEL;
   }
+  if (process.env.AIR_REVIEW_MODEL_TRIAGE) next.models.roles.triage = process.env.AIR_REVIEW_MODEL_TRIAGE;
   if (process.env.AIR_REVIEW_MODEL_PLANNER) next.models.roles.planner = process.env.AIR_REVIEW_MODEL_PLANNER;
   if (process.env.AIR_REVIEW_MODEL_REVIEWER) {
     next.models.roles.reviewer = process.env.AIR_REVIEW_MODEL_REVIEWER;
   }
   if (process.env.AIR_REVIEW_MODEL_VERIFIER) {
     next.models.roles.verifier = process.env.AIR_REVIEW_MODEL_VERIFIER;
+  }
+  // Complexity tiers: a cheap reviewer for light changes, a strong one for heavy pull requests.
+  if (process.env.AIR_REVIEW_MODEL_REVIEWER_LIGHT) {
+    next.models.tiers.light.reviewer = process.env.AIR_REVIEW_MODEL_REVIEWER_LIGHT;
+  }
+  if (process.env.AIR_REVIEW_MODEL_VERIFIER_LIGHT) {
+    next.models.tiers.light.verifier = process.env.AIR_REVIEW_MODEL_VERIFIER_LIGHT;
+  }
+  if (process.env.AIR_REVIEW_MODEL_REVIEWER_HEAVY) {
+    next.models.tiers.heavy.reviewer = process.env.AIR_REVIEW_MODEL_REVIEWER_HEAVY;
+  }
+  if (process.env.AIR_REVIEW_MODEL_VERIFIER_HEAVY) {
+    next.models.tiers.heavy.verifier = process.env.AIR_REVIEW_MODEL_VERIFIER_HEAVY;
+  }
+  if (process.env.AIR_REVIEW_ROUTING_MODE) {
+    next.routing.mode = process.env.AIR_REVIEW_ROUTING_MODE as typeof next.routing.mode;
   }
   if (process.env.AIR_REVIEW_BASE_URL) next.endpoint.baseUrl = process.env.AIR_REVIEW_BASE_URL;
   // apiKeyEnv is also what `doctor` reports as the credential's source, so keep it truthful.
@@ -105,8 +123,6 @@ export function applyEnvOverrides(config: AirReviewConfig): AirReviewConfig {
     next.endpoint.maxTokensParameter = process.env
       .AIR_REVIEW_MAX_TOKENS_PARAMETER as typeof next.endpoint.maxTokensParameter;
   }
-  if (process.env.OLLAMA_HOST) next.ollama.baseUrl = process.env.OLLAMA_HOST;
-  if (process.env.AIR_REVIEW_OPENAI_BASE_URL) next.endpoint.baseUrl = process.env.AIR_REVIEW_OPENAI_BASE_URL;
 
   if (process.env.AIR_REVIEW_PRICING) {
     try {

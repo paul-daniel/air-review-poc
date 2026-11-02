@@ -36,7 +36,7 @@ function pick<T>(...values: Array<T | undefined>): T | undefined {
  */
 export function normalizeBaseUrl(baseUrl: string, providerId: string): string {
   let trimmed = baseUrl.replace(/\/+$/, "");
-  if (!providerId.startsWith("azure-")) return trimmed;
+  if (!providerId.startsWith("azure-") || providerId === "azure-foundry-agent") return trimmed;
   // The New Foundry portal prints "https://<res>.services.ai.azure.com/api/projects/" for a
   // resource that has no project yet: that is the resource endpoint, not a project one.
   trimmed = trimmed.replace(/\/api\/projects$/i, "");
@@ -52,10 +52,7 @@ export function normalizeBaseUrl(baseUrl: string, providerId: string): string {
   return trimmed;
 }
 
-/**
- * Merge preset defaults with the `endpoint` section and the legacy `openai`
- * section (kept for configs written before the preset system).
- */
+/** Merge preset defaults with the `endpoint` section of the config. */
 export function resolveEndpoint(config: AirReviewConfig): ResolvedEndpoint {
   const preset = PROVIDER_PRESETS[config.provider];
   if (!preset) {
@@ -64,13 +61,31 @@ export function resolveEndpoint(config: AirReviewConfig): ResolvedEndpoint {
     );
   }
 
-  const legacy = config.openai;
   const endpoint = config.endpoint;
 
-  const apiKeyEnv = pick(endpoint.apiKeyEnv, legacy.apiKeyEnv, preset.apiKeyEnv);
-  const apiKey = pick(endpoint.apiKey, legacy.apiKey, apiKeyEnv ? process.env[apiKeyEnv] : undefined);
-  const baseUrl = pick(endpoint.baseUrl, legacy.baseUrl, preset.baseUrl);
+  const apiKeyEnv = pick(endpoint.apiKeyEnv, preset.apiKeyEnv);
+  const apiKey = pick(endpoint.apiKey, apiKeyEnv ? process.env[apiKeyEnv] : undefined);
+  const baseUrl = pick(endpoint.baseUrl, preset.baseUrl);
 
+  if (preset.id === "mock") {
+    return {
+      api: "chat-completions",
+      temperature: undefined,
+      maxTokensParameter: "max_tokens",
+      providerId: preset.id,
+      preset,
+      baseUrl: "mock://air-review",
+      apiKey: undefined,
+      apiKeyEnv: undefined,
+      apiKeyHeader: "authorization",
+      apiKeyPrefix: "",
+      chatPath: preset.chatPath,
+      modelsPath: preset.modelsPath,
+      listModels: true,
+      timeoutMs: endpoint.timeoutMs,
+      headers: {},
+    };
+  }
   if (!baseUrl) {
     throw new ConfigError(
       `Provider "${config.provider}" needs an endpoint URL. ` +
@@ -106,14 +121,12 @@ export function resolveEndpoint(config: AirReviewConfig): ResolvedEndpoint {
     apiKeyEnv,
     apiKeyHeader: bearer
       ? "authorization"
-      : (pick(endpoint.apiKeyHeader, legacy.apiKeyHeader, preset.apiKeyHeader) ?? "authorization"),
-    apiKeyPrefix: bearer
-      ? "Bearer "
-      : (pick(endpoint.apiKeyPrefix, legacy.apiKeyPrefix, preset.apiKeyPrefix) ?? "Bearer "),
-    chatPath: pick(endpoint.chatPath, legacy.chatPath, preset.chatPath) ?? "/chat/completions",
-    modelsPath: pick(endpoint.modelsPath, legacy.modelsPath, preset.modelsPath) ?? "/models",
-    listModels: pick(endpoint.listModels, legacy.listModels, preset.listModels) ?? true,
+      : (pick(endpoint.apiKeyHeader, preset.apiKeyHeader) ?? "authorization"),
+    apiKeyPrefix: bearer ? "Bearer " : (pick(endpoint.apiKeyPrefix, preset.apiKeyPrefix) ?? "Bearer "),
+    chatPath: pick(endpoint.chatPath, preset.chatPath) ?? "/chat/completions",
+    modelsPath: pick(endpoint.modelsPath, preset.modelsPath) ?? "/models",
+    listModels: pick(endpoint.listModels, preset.listModels) ?? true,
     timeoutMs: endpoint.timeoutMs,
-    headers: { ...legacy.headers, ...endpoint.headers },
+    headers: { ...endpoint.headers },
   };
 }

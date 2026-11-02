@@ -8,18 +8,26 @@ afterEach(() => {
 });
 
 describe("provider gating", () => {
-  it("rejects the ollama provider while its feature flag is off", () => {
+  it("rejects an unknown provider with a configuration error", () => {
     const config = defaultConfig();
     config.provider = "ollama";
     expect(() => createProvider(config)).toThrow(ConfigError);
-    expect(() => createProvider(config)).toThrow(/not available in this build/i);
+    expect(() => createProvider(config)).toThrow(/unknown provider/i);
   });
 
-  it("keeps the ollama provider reachable behind the reserved flag", () => {
+  it("offers an offline mock provider for tests and demos", () => {
     const config = defaultConfig();
-    config.provider = "ollama";
-    config.features.ollama = true;
-    expect(createProvider(config).id).toBe("ollama");
+    config.provider = "mock";
+    expect(createProvider(config).id).toBe("mock");
+  });
+
+  it("needs the project endpoint for the Foundry Agent Service provider", () => {
+    const config = defaultConfig();
+    config.provider = "azure-foundry-agent";
+    config.endpoint.baseUrl = "https://res.services.ai.azure.com";
+    expect(() => createProvider(config)).toThrow(/project.*endpoint/i);
+    config.endpoint.baseUrl = "https://res.services.ai.azure.com/api/projects/reviews";
+    expect(createProvider(config).id).toBe("azure-foundry-agent");
   });
 });
 
@@ -50,8 +58,8 @@ describe("openai-compatible endpoint shapes", () => {
     process.env.TEST_PROVIDER_KEY = "secret-key";
     try {
       const config = defaultConfig();
-      config.openai.baseUrl = "https://api.example.com/v1";
-      config.openai.apiKeyEnv = "TEST_PROVIDER_KEY";
+      config.endpoint.baseUrl = "https://api.example.com/v1";
+      config.endpoint.apiKeyEnv = "TEST_PROVIDER_KEY";
       const provider = createProvider(config);
       const calls = captureFetch();
       await provider.generate({ model: "m", messages: [{ role: "user", content: "hi" }] });
@@ -87,12 +95,12 @@ describe("openai-compatible endpoint shapes", () => {
     process.env.AZURE_OPENAI_KEY = "azure-secret";
     try {
       const config = defaultConfig();
-      config.openai.baseUrl = "https://my-resource.openai.azure.com/openai/deployments/my-deployment";
-      config.openai.chatPath = "/chat/completions?api-version=2024-10-21";
-      config.openai.apiKeyEnv = "AZURE_OPENAI_KEY";
-      config.openai.apiKeyHeader = "api-key";
-      config.openai.apiKeyPrefix = "";
-      config.openai.listModels = false;
+      config.endpoint.baseUrl = "https://my-resource.openai.azure.com/openai/deployments/my-deployment";
+      config.endpoint.chatPath = "/chat/completions?api-version=2024-10-21";
+      config.endpoint.apiKeyEnv = "AZURE_OPENAI_KEY";
+      config.endpoint.apiKeyHeader = "api-key";
+      config.endpoint.apiKeyPrefix = "";
+      config.endpoint.listModels = false;
       const provider = createProvider(config);
       const calls = captureFetch();
       await provider.generate({ model: "ignored", messages: [{ role: "user", content: "hi" }] });
