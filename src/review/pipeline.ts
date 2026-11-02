@@ -81,6 +81,10 @@ interface PipelineDeps {
 
 const RULES: DeterministicRule[] = [...angularRules, secretRule];
 
+function isToolArtifact(path: string): boolean {
+  return path === ".air-review" || path.startsWith(".air-review/");
+}
+
 export async function runReview(options: ReviewOptions, deps: PipelineDeps): Promise<ReviewOutcome> {
   const { config, provider, models, scm, git, cache } = deps;
   const runId = `ar_${randomUUID().slice(0, 8)}`;
@@ -231,7 +235,9 @@ export async function runReview(options: ReviewOptions, deps: PipelineDeps): Pro
     !baseMoved &&
     previous!.pullRequest.number === snapshot.number;
   const fromSha = incremental ? (previous!.pullRequest.headSha ?? snapshot.baseSha) : snapshot.baseSha;
-  const delta = await scm.getDelta(fromSha, snapshot.headSha);
+  const rawDelta = await scm.getDelta(fromSha, snapshot.headSha);
+  // The tool's own artifacts (.air-review/) are never part of a review.
+  const delta = { ...rawDelta, files: rawDelta.files.filter((file) => !isToolArtifact(file.path)) };
   const reviewable = reviewableFiles(delta);
   deltaStep.end("done", {
     detail: `${incremental ? "incremental since" : "full from"} ${fromSha.slice(0, 8)}: ${delta.files.length} file(s), +${delta.files.reduce((n, f) => n + f.addedLines.length, 0)}/−${delta.files.reduce((n, f) => n + f.removedLines.length, 0)} lines`,

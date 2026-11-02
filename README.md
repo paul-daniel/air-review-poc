@@ -1,208 +1,180 @@
 # air-review
 
-Contextual AI code review as a CLI. Instead of dumping a diff into a model,
-air-review builds a structural understanding of the change, gathers only the
-evidence it needs, verifies findings before publishing, and remembers what it
-already reviewed so follow-up pushes are incremental.
-
-It runs on **GitHub** and **Azure DevOps (Azure Repos)** and any **OpenAI-compatible API** (OpenAI, Azure OpenAI,
-Microsoft Foundry, Amazon Bedrock, Google, Anthropic, Mistral, Groq,
-OpenRouter, internal gateways...), with an **Angular** context pack and one
-model per agent role. Reviews are HTTP calls: no model downloads, no GPU, no
-local runtime in the pipeline.
+AI code review that behaves like a careful colleague on a pull request: it
+measures each change, routes it to a cheap or a strong reviewer agent, verifies
+every finding against the code before publishing, remembers what it already
+reviewed, and votes on the pull request. Models run on **Microsoft Foundry**
+(or any OpenAI-compatible endpoint); the first integration target is
+**Azure DevOps**.
 
 ```text
-diff → structural analysis → context plan (exemplars, imports, repo profile) → review → verification against code → incremental publish
+diff → structural analysis → triage (which agent?) → reviewer (light | standard | heavy)
+     → verifier → ledger (what changed since last time?) → PR comments + vote + cost report
 ```
 
-## First local test
+## Architecture
 
-Run `npm run demo` to create a Git corpus with known defects, safe examples,
-fixes and a regression. Follow [the Foundry first-run guide (French)](docs/first-local-test.fr.md).
-Run `npm run test:api` for a free end-to-end test with a simulated Foundry API.
+```mermaid
+flowchart TD
+  A[Pull request delta<br/>incremental since the last reviewed head] --> B[Structural analysis<br/>symbols, exemplars, repo profile]
+  B --> C[Deterministic rules<br/>secrets, Angular lifecycle, conventions]
+  C --> T{{Triage<br/>files · lines · modules · kinds}}
+  T -->|light| RL[Reviewer light<br/>cheap deployment]
+  T -->|standard| RS[Reviewer standard]
+  T -->|heavy| RH[Reviewer heavy<br/>strong deployment]
+  RL --> V1[Deterministic verification<br/>anchors, duplicates, severities]
+  RS --> V1
+  RH --> V1
+  V1 --> V2[Verifier model<br/>checks each finding against the code]
+  V2 --> L[Ledger reconciliation<br/>new · still open · resolved · reopened]
+  L --> G{Policy gate}
+  G --> P[Publish<br/>one thread per finding, one summary, one state]
+  P --> VOTE[Vote<br/>approve · approve with suggestions · request changes]
+  P --> R[Run report<br/>cost per step, tokens, duration, workflow diagram]
+  classDef det fill:#f3f4f6,stroke:#9ca3af;
+  class A,B,C,V1,L,G,P,R det;
+```
+
+Grey boxes are deterministic software; only triage, the reviewer and the
+verifier are model calls, and each can be a different model (or Foundry
+agent) chosen by configuration. Details: [docs/architecture.md](docs/architecture.md).
+
+**Why it is different.** The model is not the product; the evidence given to
+it is. Deterministic code handles what software can decide exactly (diffs,
+symbols, subscriptions, secrets, the gate, the ledger, the cache) and the
+model is only paid for reasoning. The reviewer sees how _your_ repository
+already does the same thing (existing files of the same kind, the exported
+API of imported modules, a repository profile), findings keep a stable
+identity across pushes, and every run says which agent reviewed, why, and
+what it cost.
+
+## Installation
+
+```bash
+# Node.js >= 22.12
+git clone https://github.com/paul-daniel/air-review-poc.git
+cd air-review-poc
+npm install
+npm run build
+npm link            # provides the `air-review` command
+```
 
 ## Quickstart
 
 ```bash
-# Node.js >= 22.12
-# install from this repository
-npm install && npm run build && npm link
-
-cd your-angular-repo
-export OPENAI_API_KEY=sk-...
-air-review init                              # writes an annotated air-review.yaml
-air-review doctor                            # config, key, endpoint, git, SCM
+cd your-repo
+air-review init --provider azure-foundry --base-url https://my-res.services.ai.azure.com   # annotated air-review.yaml
+air-review doctor                            # config, credential, endpoint, deployments, git, SCM
+air-review inspect --base origin/main        # what the tool sees, no model call
 air-review dry-run --base origin/main        # full review, nothing published
-air-review review --publish                  # publish findings
+air-review review --publish                  # publish threads and vote (in a pipeline)
 ```
 
-Not sure where to start? `air-review example` prints copy-paste snippets, and
-every command documents its own examples: `air-review review --help`.
+No credentials at hand? The offline provider runs the whole pipeline for free
+and deterministically (deterministic rules still fire; the model steps return
+nothing unless the diff carries `air-review:expect` test markers):
 
-## Why it is different
+```bash
+AIR_REVIEW_PROVIDER=mock air-review dry-run --base origin/main
+```
 
-The model is not the product; the evidence given to it is. Deterministic rules
-handle what software can decide exactly (diffs, symbols, subscriptions,
-conventions, secrets, the policy gate), and the model is only paid for
-reasoning.
+Every run writes `.air-review/reports/<run>.md` with the routing decision,
+the cost of each step and the workflow actually executed.
 
-**Contextual** means the reviewer sees how _your_ repository already does the
-same thing. Before the model call, the planner finds existing files of the same
-kind as each changed file (a new component gets the two or three closest
-components, a translation edit gets its sibling language file), reads the
-exported API of the modules the change imports, and builds a one-paragraph
-profile of the repository (languages, frameworks, test tools, translation
-folders). When a change has no precedent in the repository, the model is told
-so and asked for widely accepted practice instead of inventing a "convention".
-`air-review inspect` shows exactly what will be sent, and why, before you pay
-for a single token.
+## Models on Microsoft Foundry
 
-Findings separate severity from confidence and say where a fix belongs:
+Two verified paths, both configured without touching code:
 
-Colors are on by default. Findings show syntax-highlighted source, language
-labels, affected lines and actionable fix examples. Concise review prose is
-followed by compact evidence and confidence metadata. Interactive terminals
-include a progress spinner and a brief report reveal. Use `--no-animation`
-to disable motion, `--plain` for unstyled logs, or `--json` for automation.
+| `provider`            | What a role model is                 | Endpoint                                                       |
+| --------------------- | ------------------------------------ | -------------------------------------------------------------- |
+| `azure-foundry`       | a **deployment name** (OpenAI v1 API) | `https://<resource>.services.ai.azure.com` (or `.openai.azure.com`) |
+| `azure-foundry-agent` | a **prompt agent name** (Agent Service) | `https://<resource>.services.ai.azure.com/api/projects/<project>` |
 
-![Demo review output](docs/assets/terminal-review.png)
+```yaml
+provider: azure-foundry
+models:
+  roles: { triage: gpt-5-mini, reviewer: gpt-5, verifier: gpt-5-mini }
+  tiers:
+    light: { reviewer: gpt-5-mini }   # one translation file, a small helper
+    heavy: { reviewer: gpt-5-codex }  # large, cross-module pull requests
+```
 
-Rule origins (`PROJECT_CONFIG`, `FRAMEWORK`, `REPO_CONVENTION`, `HEURISTIC`)
-and the finding lifecycle are explained in [docs/architecture.md](docs/architecture.md).
+Environment variables (`AIR_REVIEW_MODEL_REVIEWER`, `AIR_REVIEW_MODEL_REVIEWER_LIGHT`,
+`AIR_REVIEW_MODEL_REVIEWER_HEAVY`, `AIR_REVIEW_ACCESS_TOKEN`, …) override the file, so a
+pipeline variable group is enough. Full guide, commented example and start-up
+procedure: [docs/foundry.md](docs/foundry.md).
+
+## Azure DevOps
+
+In a pull-request validation build the adapter is auto-detected. It keeps its
+memory in the pull request itself (one state thread, one summary thread, one
+thread per finding, never duplicated), reviews only what changed since the
+last push, adds itself as a reviewer and votes **Approved** (10), **Approved
+with suggestions** (5) or **Waiting for author** (-5), and exits `10` so a
+build validation policy blocks the merge while blocking findings remain.
+
+Ready-to-use pipeline and permissions: [docs/azure-devops.md](docs/azure-devops.md)
+and [examples/azure-pipelines.yml](examples/azure-pipelines.yml).
+
+## Reading the cost reports
+
+The summary comment, the terminal and `.air-review/reports/<run>.md` all show
+the same table: one row per step with status, agent/model, duration, input,
+cached and output tokens and estimated cost, plus a Mermaid diagram of the
+path really taken (skipped and cached steps greyed, unused reviewer tiers
+shown as not selected). Prices come from `telemetry.pricing` (USD per million
+tokens per deployment). Guide: [docs/observability.md](docs/observability.md).
 
 ## Commands
 
-| Command                                                | What it does                                          |
-| ------------------------------------------------------ | ----------------------------------------------------- |
-| `air-review init`                                      | write a provider-ready config                         |
-| `air-review doctor`                                    | check config, key, endpoint, models, git and SCM      |
-| `air-review example`                                   | copy-paste snippets (providers, CI, config, local)    |
-| `air-review inspect`                                   | what the tool sees — structural facts, no model calls |
-| `air-review dry-run`                                   | full review, nothing published                        |
-| `air-review review`                                    | review and optionally `--publish`                     |
-| `air-review explain`                                   | list stored findings, or show one with its evidence   |
-| `air-review models`                                    | what the endpoint offers, and which role uses it      |
-| `air-review telemetry`                                 | recent runs with tokens, cost estimate and duration   |
-| `air-review cache` / `stats` / `prune`                 | inspect or clean the local cache                      |
-| `air-review config` / `get` / `set` / `unset` / `list` | read or edit config                                   |
-| `air-review help [command]`                            | the full reference for any command                    |
+| Command                                                | What it does                                                   |
+| ------------------------------------------------------ | -------------------------------------------------------------- |
+| `air-review init`                                      | write a provider-ready, commented config                       |
+| `air-review doctor`                                    | check config, credential, endpoint, deployments, git and SCM   |
+| `air-review example`                                   | copy-paste snippets (providers, CI, config, local)             |
+| `air-review inspect`                                   | what the tool sees: delta, structural facts, context plan      |
+| `air-review dry-run`                                   | full review, nothing published                                 |
+| `air-review review [--publish] [--tier light\|standard\|heavy]` | review, publish, vote                                  |
+| `air-review explain [id]`                              | stored findings, or one finding with its evidence              |
+| `air-review models`                                    | what the endpoint offers and which role uses it                |
+| `air-review telemetry`                                 | recent runs: tier, tokens, cost, duration, verdict             |
+| `air-review cache stats` / `prune`                     | inspect or clean the local result cache                        |
+| `air-review config get` / `set` / `unset` / `list`     | read or edit the config                                        |
 
-Full details and examples: [docs/commands.md](docs/commands.md).
-
-## In a pipeline
-
-```yaml
-# air-review.yaml (committed)
-provider: azure-openai
-models:
-  roles:
-    reviewer: my-reviewer-deployment
-```
-
-```yaml
-# workflow step
-- name: Air Review
-  env:
-    GITHUB_TOKEN: ${{ github.token }} # automatic on GitHub Actions
-    AIR_REVIEW_API_KEY: ${{ secrets.AIR_REVIEW_API_KEY }}
-  run: air-review review --publish
-```
-
-Everything can come from the repository settings, so the same config works on
-any platform:
-
-| Variable                                 | GitHub Actions | Azure DevOps | Value                                                |
-| ---------------------------------------- | -------------- | ------------ | ---------------------------------------------------- |
-| `AIR_REVIEW_PROVIDER`                    | variable       | variable     | preset id (`azure-openai`, `bedrock`, `google`, ...) |
-| `AIR_REVIEW_BASE_URL`                    | variable       | variable     | endpoint URL                                         |
-| `AIR_REVIEW_API_KEY`                     | **secret**     | **secret**   | provider API key                                     |
-| `AIR_REVIEW_MODEL_REVIEWER`              | variable       | variable     | reviewer model / deployment name                     |
-| `AIR_REVIEW_MODEL_PLANNER` / `_VERIFIER` | variable       | variable     | the two cheaper roles                                |
-
-Exit code `10` fails the check when the gate finds blocking findings, so the
-review behaves like build and test. Setup details:
-[docs/github-ci.md](docs/github-ci.md) and [docs/azure-devops.md](docs/azure-devops.md).
-
-| Platform                   | `--ci`         | Detected from                                   | Memory                                       |
-| -------------------------- | -------------- | ----------------------------------------------- | -------------------------------------------- |
-| GitHub                     | `github`       | `pull_request` event payload                    | PR issue comments + review comments          |
-| Azure DevOps (Azure Repos) | `azure-devops` | `TF_BUILD` + `SYSTEM_PULLREQUEST_PULLREQUESTID` | PR threads (state, summary, one per finding) |
-| any git checkout           | `local`        | fallback                                        | `.air-review/`                               |
-
-## Telemetry
-
-Every run reports per-role usage — tokens, model calls, cache hits, duration,
-and an estimated cost when `telemetry.pricing` is configured:
-
-```text
-Usage & cost
-Estimated cost (USD)  ~$0.0042 · 8.3 s · 2 API calls
-Input   3,100 tokens · 1,000 from provider cache
-Output  1,000 tokens · 200 reasoning
-Cache is included in input; reasoning is included in output.
-```
-
-Cached input and reasoning token subsets are shown when reported by the API.
-Configure `cachedInput` alongside `input` and `output` rates per deployment,
-in USD per million tokens, or supply `AIR_REVIEW_PRICING` as JSON.
-Local reviews always write `.air-review/summary.md` and `.air-review/context.md`.
-
-The same record is appended to `.air-review/telemetry.jsonl` (local only,
-nothing is sent anywhere) and can be uploaded as a CI artifact.
-`air-review telemetry` shows recent runs.
-
-## Configuration
-
-```yaml
-version: 1
-provider: openai # see: air-review example providers
-endpoint:
-  baseUrl: https://api.openai.com/v1
-  apiKeyEnv: OPENAI_API_KEY
-models:
-  roles:
-    planner: gpt-4o-mini # context planning
-    reviewer: gpt-4.1 # strong reasoning pass
-    verifier: gpt-4o-mini # filters and calibrates before publishing
-platform:
-  provider: github
-  publish: false
-```
-
-YAML, TOML and JSON are all read; environment variables override the file.
-Every option, its default and its examples: [docs/configuration.md](docs/configuration.md).
+Exit codes: `0` gate passed · `10` gate failed · `20` config · `30` model/provider · `40` SCM · `50` internal.
+Reference: [docs/commands.md](docs/commands.md).
 
 ## Documentation
 
-| Document                                           | Contents                                                           |
-| -------------------------------------------------- | ------------------------------------------------------------------ |
-| [docs/commands.md](docs/commands.md)               | every command with examples and options                            |
-| [docs/configuration.md](docs/configuration.md)     | complete option reference                                          |
-| [docs/providers.md](docs/providers.md)             | vendor presets and endpoint recipes                                |
-| [docs/github-ci.md](docs/github-ci.md)             | GitHub Actions setup                                               |
-| [docs/azure-devops.md](docs/azure-devops.md)       | Azure Pipelines / Azure Repos setup, threads as memory             |
-| [docs/live-check.md](docs/live-check.md)           | keyless first real run on Microsoft Foundry and an Azure DevOps PR |
-| [docs/WORK-SETUP.md](docs/WORK-SETUP.md) | plain step-by-step: Foundry + Azure DevOps pipeline at work, no laptop involved |
-| [docs/ASSESSMENT.md](docs/ASSESSMENT.md)           | product and engineering assessment, decisions, roadmap             |
-| [docs/architecture.md](docs/architecture.md)       | pipeline, roles, finding lifecycle                                 |
-| [docs/security.md](docs/security.md)               | prompt-injection boundary, redaction, tokens                       |
-| [docs/troubleshooting.md](docs/troubleshooting.md) | exit codes and common errors                                       |
+| Document                                             | Contents                                                              |
+| ---------------------------------------------------- | --------------------------------------------------------------------- |
+| [docs/architecture.md](docs/architecture.md)         | pipeline, roles, routing, finding lifecycle, memory model             |
+| [docs/foundry.md](docs/foundry.md)                   | Microsoft Foundry: deployments, prompt agents, interchangeable models |
+| [docs/azure-devops.md](docs/azure-devops.md)         | Azure Pipelines / Azure Repos: pipeline, permissions, vote, status    |
+| [docs/review-format.md](docs/review-format.md)       | how the main AI reviewers format feedback, and what we chose          |
+| [docs/observability.md](docs/observability.md)       | run reports, cost per step, workflow diagram, telemetry               |
+| [docs/configuration.md](docs/configuration.md)       | every option with its default                                         |
+| [docs/providers.md](docs/providers.md)               | vendor presets and endpoint recipes                                   |
+| [docs/commands.md](docs/commands.md)                 | every command with examples                                           |
+| [docs/github-ci.md](docs/github-ci.md)               | GitHub Actions setup                                                  |
+| [docs/security.md](docs/security.md)                 | prompt-injection boundary, redaction, tokens                          |
+| [docs/troubleshooting.md](docs/troubleshooting.md)   | exit codes and common errors                                          |
+| [RAPPORT.md](RAPPORT.md)                             | what was done, decisions taken, what remains (French)                 |
+
+Test bed with ready-made pull-request scenarios (translation-only, small
+classification helper, large multi-module feature, docs-only re-push, clean
+refactor, planted defects):
+[paul-daniel/air-review-test-repo](https://github.com/paul-daniel/air-review-test-repo).
 
 ## Development
 
 ```bash
 npm install
 npm run build
-npm test            # unit tests
-npm run test:e2e    # full CLI scenario against a local fake model endpoint
+npm test            # unit tests (routing, cache, deduplication, adapters, rendering)
+npm run check       # typecheck + lint + format + tests
 npm run schema      # regenerate schema/air-review.schema.json
 ```
-
-## Roadmap
-
-Deferred by design: a Bitbucket adapter, per-role provider
-mixing, more framework packs, semantic-search fallback, and a real-model quality
-benchmark. The synthetic local corpus tests integration, not model accuracy.
 
 ## License
 

@@ -63,8 +63,9 @@ function nodeLabel(step: StepRecord): string {
   const parts: string[] = [escape(step.label)];
   if (step.model) parts.push(escape(step.model));
   const facts: string[] = [];
-  if (step.status === "done" || step.status === "failed")
+  if (step.status === "done" || step.status === "failed") {
     facts.push(`${(step.durationMs / 1000).toFixed(1)}s`);
+  }
   if (step.inputTokens !== undefined || step.outputTokens !== undefined) {
     facts.push(`${step.inputTokens ?? 0}→${step.outputTokens ?? 0} tok`);
   }

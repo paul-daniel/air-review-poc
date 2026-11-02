@@ -108,8 +108,9 @@ export function triageDeterministically(
   ].filter((hit): hit is string => Boolean(hit));
   if (heavyHits.length > 0) {
     reasons.push(...heavyHits);
-    if (signals.surfaceFiles.length)
+    if (signals.surfaceFiles.length) {
       reasons.push(`API surface touched: ${signals.surfaceFiles.slice(0, 3).join(", ")}`);
+    }
     return { tier: "heavy", reasons, ambiguous: false };
   }
   if (
@@ -184,8 +185,9 @@ export async function runTriageModel(
     parse: (raw) => {
       const record = (raw ?? {}) as Record<string, unknown>;
       const tier = normalizeEnum(record.tier, ["light", "standard", "heavy"] as const);
-      if (!tier)
+      if (!tier) {
         throw new Error(`tier must be light, standard or heavy (got ${JSON.stringify(record.tier)})`);
+      }
       const confidence = Math.min(1, Math.max(0, normalizeNumber(record.confidence) ?? 0.5));
       const reasons = Array.isArray(record.reasons)
         ? record.reasons

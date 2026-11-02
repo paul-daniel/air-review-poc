@@ -1,0 +1,122 @@
+# air-review on Microsoft Foundry (new) with Azure DevOps.
+# Copy to the repository root as air-review.yaml. Every key has a default;
+# only the ones that matter for a Foundry + Azure DevOps setup are shown.
+# Secrets never live here: they come from the pipeline variable group.
+
+version: 1
+
+frameworks: [angular] # context pack; the exemplar planner itself is language-agnostic
+
+# ---------------------------------------------------------------------------
+# Provider: the OpenAI v1 route of a Foundry resource.
+#   https://<resource>.services.ai.azure.com  (or https://<resource>.openai.azure.com)
+# The tool appends /openai/v1 itself; no api-version is needed on that route.
+# To call Foundry Agent Service prompt agents instead, use
+#   provider: azure-foundry-agent
+#   endpoint.baseUrl: https://<resource>.services.ai.azure.com/api/projects/<project>
+# and give agent names (not deployment names) in models.* below.
+# ---------------------------------------------------------------------------
+provider: azure-foundry
+endpoint:
+  baseUrl: https://my-resource.services.ai.azure.com # or AIR_REVIEW_BASE_URL
+  # Credential, one of:
+  #   - API key:   AZURE_AI_API_KEY (sent in the api-key header), or AIR_REVIEW_API_KEY
+  #   - Entra ID:  AIR_REVIEW_ACCESS_TOKEN, a token for scope https://ai.azure.com/.default,
+  #                sent as Authorization: Bearer (keyless; recommended by Microsoft)
+  apiKeyEnv: AZURE_AI_API_KEY
+  api: auto # chat completions first; deployments that only speak the Responses API switch automatically
+  timeoutMs: 120000
+
+# ---------------------------------------------------------------------------
+# Models per agent role. On Foundry a value is a DEPLOYMENT NAME.
+# Change a deployment here (or through AIR_REVIEW_MODEL_* variables) and the
+# agent uses it on the next run: no code change.
+# ---------------------------------------------------------------------------
+models:
+  default: gpt-5-mini # fallback for any role left unset
+  roles:
+    triage: gpt-5-mini # cheap: decides the complexity tier of a pull request
+    planner: gpt-5-mini # reserved (context planning is deterministic today)
+    reviewer: gpt-5 # standard tier: the strong reasoning pass
+    verifier: gpt-5-mini # cheap: checks every finding against the quoted code
+  # Tiers override reviewer/verifier once triage has classified the change.
+  # An unset tier model falls back to the standard role model above.
+  tiers:
+    light:
+      reviewer: gpt-5-mini # one translation file, a small helper, tests only
+      verifier: gpt-5-mini
+    heavy:
+      reviewer: gpt-5-codex # large or cross-module pull requests
+      verifier: gpt-5-mini
+
+# ---------------------------------------------------------------------------
+# Routing by complexity. Thresholds count files, added+removed lines and
+# top-level modules (apps/web, libs/shared, src...) in the reviewed delta.
+#   deterministic: thresholds only, never a triage call
+#   hybrid:        thresholds for the clear cases, triage model for the middle band (default)
+#   model:         the triage model decides every time (thresholds shown to it as a hint)
+# ---------------------------------------------------------------------------
+routing:
+  enabled: true
+  mode: hybrid
+  light: { maxFiles: 3, maxLines: 150 } # and a single module; translation/data/docs-only is always light
+  heavy: { minFiles: 10, minLines: 400, minModules: 3 } # any one of these makes the change heavy
+
+review:
+  severities:
+    publish: [BLOCKER, CRITICAL, MAJOR, MINOR] # INFO stays in the report only
+  gate:
+    severities: [BLOCKER, CRITICAL] # what fails the build (exit code 10)
+    minimumConfidence: 0.9 # ...when the finding is at least this confident
+  maxFindings: 40
+  maxOutputTokens: 16384 # reasoning deployments spend most of it on hidden reasoning
+  modelSkipKinds: [docs, binary] # a push touching only these costs no model call
+
+# ---------------------------------------------------------------------------
+# Observability: per-run report with cost per step and the workflow diagram.
+# ---------------------------------------------------------------------------
+observability:
+  reportDir: .air-review/reports # <run>.md + <run>.json; upload as a pipeline artifact
+  diagram: true # Mermaid flowchart of the path actually taken
+  publishInSummary: true # cost table + diagram in the pull-request summary comment
+
+telemetry:
+  enabled: true
+  log: .air-review/telemetry.jsonl # one JSON line per run, local only
+  # USD per 1M tokens, keyed by DEPLOYMENT (or agent) name. Every deployment
+  # called must be priced for a total; check the current Foundry price list.
+  pricing:
+    gpt-5: { input: 1.25, cachedInput: 0.125, output: 10 }
+    gpt-5-mini: { input: 0.25, cachedInput: 0.025, output: 2 }
+    gpt-5-codex: { input: 1.25, cachedInput: 0.125, output: 10 }
+
+memory:
+  backend: pr-ledger # review memory lives in the pull request threads
+cache:
+  enabled: true
+  dir: .air-review/cache # local result cache; content-addressed, reconstructible
+privacy:
+  redactSecrets: true # secrets are redacted before anything leaves the machine
+  sendFullFiles: false
+
+# ---------------------------------------------------------------------------
+# Azure DevOps: detected automatically in a PR validation build
+# (TF_BUILD + SYSTEM_PULLREQUEST_PULLREQUESTID). The token comes from
+# SYSTEM_ACCESSTOKEN ($(System.AccessToken)) or a PAT for manual runs.
+# ---------------------------------------------------------------------------
+platform:
+  provider: azure-devops
+  publish: true # publish without --publish (the pipeline is the only caller)
+  azureDevops:
+    # organizationUrl / project / repository are read from the pipeline variables
+    tokenEnv: SYSTEM_ACCESSTOKEN
+    apiVersion: "7.1"
+    vote:
+      enabled: true # add the build service as a reviewer and vote
+      approveWithSuggestions: true # vote 5 (not 0) when only non-blocking findings remain
+    status:
+      enabled: false # also post a pull-request status "air-review/gate" (Status branch policy)
+      genre: air-review
+      name: gate
+  local:
+    base: origin/main # base ref for manual `--ci local` runs
