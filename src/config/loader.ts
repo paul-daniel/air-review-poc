@@ -69,6 +69,18 @@ function discoverConfig(explicitPath?: string): string | null {
  * AIR_REVIEW_MODEL_{REVIEWER,VERIFIER}_{LIGHT,HEAVY}, AIR_REVIEW_ROUTING_MODE,
  * AIR_REVIEW_BASE_URL, AIR_REVIEW_API_KEY, AIR_REVIEW_ACCESS_TOKEN, AIR_REVIEW_PRICING.
  */
+/**
+ * Azure Pipelines leaves an unknown macro such as `$(AIR_REVIEW_API_KEY)`
+ * untouched in the job's environment. Such a value is not a credential: it is
+ * ignored so the keyless path (Entra ID) can take over instead of a 401.
+ */
+function envValue(name: string): string | undefined {
+  const value = process.env[name];
+  if (!value) return undefined;
+  if (/^\$\([^)]*\)$/.test(value.trim())) return undefined;
+  return value;
+}
+
 export function applyEnvOverrides(config: AirReviewConfig): AirReviewConfig {
   const next = structuredClone(config);
 
@@ -104,14 +116,14 @@ export function applyEnvOverrides(config: AirReviewConfig): AirReviewConfig {
   }
   if (process.env.AIR_REVIEW_BASE_URL) next.endpoint.baseUrl = process.env.AIR_REVIEW_BASE_URL;
   // apiKeyEnv is also what `doctor` reports as the credential's source, so keep it truthful.
-  if (process.env.AIR_REVIEW_API_KEY) {
-    next.endpoint.apiKey = process.env.AIR_REVIEW_API_KEY;
+  if (envValue("AIR_REVIEW_API_KEY")) {
+    next.endpoint.apiKey = envValue("AIR_REVIEW_API_KEY");
     next.endpoint.apiKeyEnv = "AIR_REVIEW_API_KEY";
   }
   if (process.env.AIR_REVIEW_API_KEY_ENV) next.endpoint.apiKeyEnv = process.env.AIR_REVIEW_API_KEY_ENV;
   // A short-lived access token (Microsoft Entra ID, OAuth gateways) is sent as a bearer token.
-  if (process.env.AIR_REVIEW_ACCESS_TOKEN) {
-    next.endpoint.apiKey = process.env.AIR_REVIEW_ACCESS_TOKEN;
+  if (envValue("AIR_REVIEW_ACCESS_TOKEN")) {
+    next.endpoint.apiKey = envValue("AIR_REVIEW_ACCESS_TOKEN");
     next.endpoint.apiKeyEnv = "AIR_REVIEW_ACCESS_TOKEN";
     next.endpoint.auth = "bearer";
   }

@@ -1,8 +1,9 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../src/config/loader.js";
+import { defaultConfig } from "../src/config/defaults.js";
 import { configGet, configSet } from "../src/config/access.js";
 import { ConfigError } from "../src/errors.js";
 
@@ -125,6 +126,21 @@ describe("config loader", () => {
     const reloaded = loadConfig(file).config;
     expect(reloaded.models.roles.reviewer).toBe("qwen3:14b");
     expect(reloaded.review.gate.minimumConfidence).toBe(0.95);
+  });
+});
+
+describe("unexpanded pipeline macros", () => {
+  it("ignores $(NAME) values left by Azure Pipelines so keyless auth can take over", async () => {
+    const { applyEnvOverrides } = await import("../src/config/loader.js");
+    const { resolveEndpoint } = await import("../src/model/resolve.js");
+    vi.stubEnv("AIR_REVIEW_API_KEY", "$(AIR_REVIEW_API_KEY)");
+    vi.stubEnv("AZURE_AI_API_KEY", "$(AZURE_AI_API_KEY)");
+    const config = applyEnvOverrides(defaultConfig());
+    expect(config.endpoint.apiKey).toBeUndefined();
+    config.provider = "azure-foundry";
+    config.endpoint.baseUrl = "https://res.services.ai.azure.com";
+    expect(resolveEndpoint(config).apiKey).toBeUndefined();
+    vi.unstubAllEnvs();
   });
 });
 

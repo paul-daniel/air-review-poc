@@ -37,7 +37,9 @@ export function resolveEndpoint(config) {
     }
     const endpoint = config.endpoint;
     const apiKeyEnv = pick(endpoint.apiKeyEnv, preset.apiKeyEnv);
-    const apiKey = pick(endpoint.apiKey, apiKeyEnv ? process.env[apiKeyEnv] : undefined);
+    const fromEnv = apiKeyEnv ? process.env[apiKeyEnv] : undefined;
+    // An unexpanded pipeline macro (`$(NAME)`) is not a credential.
+    const apiKey = pick(endpoint.apiKey, fromEnv && !/^\$\([^)]*\)$/.test(fromEnv.trim()) ? fromEnv : undefined);
     const baseUrl = pick(endpoint.baseUrl, preset.baseUrl);
     if (preset.id === "mock") {
         return {
