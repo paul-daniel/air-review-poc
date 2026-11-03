@@ -35,6 +35,17 @@ export function renderSummaryMarkdown(summary, options = {}) {
     if (summary.skippedReason) {
         lines.push("", `_No new review: ${summary.skippedReason}._`);
     }
+    // Everything below the verdict line is folded by default: the activity feed
+    // shows one line per review; routing, findings and cost are one click away.
+    const detailsTitle = [
+        "Details",
+        routing ? `routing (${routing.tier})` : "routing",
+        `${summary.open} open finding(s)`,
+        formatCost(summary.metrics.estimatedCostUsd) === "n/a" ? null : `cost ${formatCost(summary.metrics.estimatedCostUsd)}`,
+    ]
+        .filter(Boolean)
+        .join(" · ");
+    lines.push("", `<details><summary>${detailsTitle}</summary>`);
     lines.push("", "**Routing**", "", routing
         ? renderRoutingBlock(summary)
         : "_No model call: nothing new to review or structural checks only._");
@@ -67,6 +78,7 @@ export function renderSummaryMarkdown(summary, options = {}) {
     if (summary.warnings.length) {
         lines.push("", "<details><summary>Notes</summary>", "", ...summary.warnings.map((w) => `- ${w}`), "", "</details>");
     }
+    lines.push("", "</details>");
     lines.push("", `<sub>${TOOL.name} ${TOOL.version} · run \`${trace?.runId ?? "n/a"}\` · the state thread holds the machine-readable ledger</sub>`);
     return lines.join("\n");
 }

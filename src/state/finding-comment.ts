@@ -120,8 +120,15 @@ export function renderFindingComment(finding: Finding, options: FindingCommentOp
   }
   if (finding.evidence.length > 0) {
     lines.push("", "**Evidence**");
+    const language = languageOf(finding.anchor.file);
     for (const item of finding.evidence) {
-      lines.push(`- ${item.label}${item.detail ? ` — ${item.detail}` : ""}`);
+      if (item.detail && looksLikeCode(item.detail)) {
+        // A quoted snippet is shown as code, not as a run-on sentence.
+        const fence = fenceFor(item.detail);
+        lines.push(`- ${item.label}`, "", fence + language, item.detail.trim(), fence, "");
+      } else {
+        lines.push(`- ${item.label}${item.detail ? ` — ${item.detail}` : ""}`);
+      }
     }
   }
   lines.push(
@@ -129,4 +136,47 @@ export function renderFindingComment(finding: Finding, options: FindingCommentOp
     `<sub>Scope ${finding.scope} · confidence ${Number(finding.confidence).toFixed(2)} · rule \`${finding.ruleId}\` (${finding.ruleOrigin}) · air-review-id ${finding.id}</sub>`,
   );
   return lines.join("\n");
+}
+
+const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+  ts: "ts",
+  tsx: "tsx",
+  js: "js",
+  jsx: "jsx",
+  mjs: "js",
+  cjs: "js",
+  html: "html",
+  scss: "scss",
+  css: "css",
+  json: "json",
+  yaml: "yaml",
+  yml: "yaml",
+  py: "python",
+  java: "java",
+  kt: "kotlin",
+  cs: "csharp",
+  go: "go",
+  rs: "rust",
+  rb: "ruby",
+  php: "php",
+  swift: "swift",
+  dart: "dart",
+  sql: "sql",
+  sh: "bash",
+  md: "md",
+};
+
+function languageOf(file: string): string {
+  const extension = file.split(".").pop()?.toLowerCase() ?? "";
+  return LANGUAGE_BY_EXTENSION[extension] ?? "";
+}
+
+/** Multi-line text, or a single line that reads as code rather than prose. */
+export function looksLikeCode(text: string): boolean {
+  if (text.includes("\n")) return true;
+  return /[;{}]|=>|\(\)|^\s*(import|export|const|let|var|function|class|return|if|for|while)\b/.test(text);
+}
+
+function fenceFor(code: string): string {
+  return "`".repeat(Math.max(3, ...[...code.matchAll(/`+/g)].map((m) => m[0].length + 1)));
 }

@@ -63,17 +63,30 @@ export function deterministicVerify(
         finding.anchor.endLine >= range.start,
     );
 
-  for (const rankedFinding of ranked) {
+  for (const candidateFinding of ranked) {
+    const fromModel = strictAnchor(candidateFinding);
+    // The origin a model declares for itself is not trusted: FRAMEWORK and
+    // PROJECT_CONFIG are reserved for the tool's own rules, and REPO_CONVENTION
+    // needs a cited repository example. Anything else is a heuristic.
+    const rankedFinding = fromModel ? { ...candidateFinding, ruleOrigin: declaredOrigin(candidateFinding) } : candidateFinding;
     // A heuristic remark about maintainability, consistency, tests or docs is
     // a reviewer preference by construction: it is published as NITPICK and
     // never blocks. Correctness and security keep the whole scale.
     const finding =
-      strictAnchor(rankedFinding) &&
+      fromModel &&
       rankedFinding.ruleOrigin === "HEURISTIC" &&
       TASTE_CATEGORIES.has(rankedFinding.category ?? "correctness") &&
       severityRank(rankedFinding.severity) < severityRank("NITPICK")
         ? { ...rankedFinding, severity: "NITPICK" as const }
         : rankedFinding;
+    if (fromModel && isPraise(finding)) {
+      dropped.push({ finding, reason: "describes correct code; nothing to change" });
+      continue;
+    }
+    if (fromModel && !finding.suggestion?.trim() && !finding.suggestedCode?.code.trim()) {
+      dropped.push({ finding, reason: "asks for no change" });
+      continue;
+    }
     if (overlapsDeterministic(finding)) {
       dropped.push({ finding, reason: "duplicates a deterministic finding on the same lines" });
       continue;
@@ -283,4 +296,28 @@ export async function llmVerify(
 
 function isSeverity(value: unknown): value is Severity {
   return ["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "NITPICK", "INFO"].includes(String(value));
+}
+
+const PRAISE_PATTERN =
+  /\b(correctly|properly|as expected|consistent with|good practice|best practices?|well[- ](structured|tested|named|handled|designed)|clear(ly)?|appropriate(ly)?|ha(s|ve) (corresponding|unit|proper) tests?|is (fine|ok|acceptable|sound)|no (issues?|problems?) found|already (handles?|covers?))\b/i;
+const PROBLEM_PATTERN =
+  /\b(missing|should|must|never|not|lacks?|leaks?|unsafe|bug|wrong|incorrect|fails?|risk|instead|avoid|outlives?|duplicat|hard-?coded|unused|dead code|undefined|exception|crash|inconsisten|violat|breaks?|todo|without|ignore[sd]?|swallow|race|overflow|inject)\b/i;
+
+/** A remark that only says the code is right: nothing for the author to do. */
+export function isPraise(finding: Pick<CandidateFinding, "title" | "summary">): boolean {
+  const text = `${finding.title} ${finding.summary}`;
+  return PRAISE_PATTERN.test(text) && !PROBLEM_PATTERN.test(text);
+}
+
+function declaredOrigin(finding: CandidateFinding): CandidateFinding["ruleOrigin"] {
+  if (finding.ruleOrigin === "REPO_CONVENTION") {
+    const cited = finding.evidence.some(
+      (item) =>
+        (item.kind === "code-example" || item.kind === "convention") &&
+        /[\w/.-]+\.[a-z]+/i.test(`${item.label} ${item.detail ?? ""}`) &&
+        !`${item.label} ${item.detail ?? ""}`.includes(finding.anchor.file),
+    );
+    return cited ? "REPO_CONVENTION" : "HEURISTIC";
+  }
+  return "HEURISTIC";
 }

@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- **Collapsed summary.** The summary comment shows its verdict and headline; everything else (routing,
+  findings table, since-last-review, cost, workflow) is in a `<details>` block closed by default.
+- **Code evidence as code.** Evidence that quotes a snippet is rendered in a fenced block.
+- **No praise, no empty findings.** Deterministic verification now drops a model finding that only says the
+  code is correct or that asks for no change, and no longer trusts the origin a model declares: `FRAMEWORK`
+  and `PROJECT_CONFIG` are reserved for the tool's rules, `REPO_CONVENTION` needs a cited example, the rest
+  is `HEURISTIC` (so taste remarks are capped at NITPICK). Seen on a live PR where three compliments were
+  published as MINOR and blocked a clean change.
 - **Collapsed memory thread.** The state thread's JSON ledger is now wrapped in a `<details>` block
   (closed by default, one title line) with the JSON in a fenced code block, so the activity feed of
   the pull request shows the review comments first. Ledgers written by 0.3.0 and earlier are still read.

@@ -76,6 +76,17 @@ Choices and why:
   reviews and PR-Agent's persistent finding state do.
 - **Collapsed observability** (cost per step, workflow diagram) keeps the
   comment short while making every run auditable.
+- **One line per review in the activity feed.** The summary shows its verdict
+  line and a one-line headline; routing, the findings table, "since the last
+  review" and the cost sections sit in a `<details>` block closed by default.
+- **Quoted code is code.** Evidence that quotes a snippet is rendered in a
+  fenced block with the file's language, never as a run-on sentence.
+- **Nothing to change, nothing to publish.** A model finding that only says
+  the code is correct, or that asks for no change, is dropped before the
+  verifier model sees it. The origin a model declares for itself is not
+  trusted either: `FRAMEWORK` and `PROJECT_CONFIG` are reserved for the
+  tool's own rules, and `REPO_CONVENTION` needs a cited repository example;
+  everything else is a `HEURISTIC`, which caps taste remarks at NITPICK.
 - **Collapsed memory thread.** The machine-readable ledger (the state thread)
   is wrapped in a `<details>` block that is closed by default and shows one
   title line in the activity feed: humans scroll past it, the tool reads the

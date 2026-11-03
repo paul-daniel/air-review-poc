@@ -83,6 +83,18 @@ describe("finding comments", () => {
     expect(body).toContain("takeUntilDestroyed");
   });
 
+  it("shows quoted code evidence as a code block", () => {
+    const body = renderFindingComment({
+      ...finding,
+      evidence: [
+        { kind: "reference", label: "truncate", detail: "export function truncate(text: string, max: number): string {\n  return text;\n}" },
+        { kind: "convention", label: "3 files use takeUntilDestroyed", detail: "in features/orders" },
+      ],
+    });
+    expect(body).toContain("- truncate\n\n```ts\nexport function truncate");
+    expect(body).toContain("- 3 files use takeUntilDestroyed — in features/orders");
+  });
+
   it("does not leak the id from unrelated comments", () => {
     expect(findingIdFromBody("ordinary comment")).toBeNull();
   });
@@ -117,5 +129,7 @@ describe("finding comments", () => {
     });
     expect(twice).toContain("No open finding");
     expect(twice.match(/Air Review/g)?.length).toBe(1);
+    expect(twice).toContain("<details><summary>Details · routing · 0 open finding(s)</summary>");
+    expect(twice.indexOf("</details>")).toBeGreaterThan(twice.indexOf("No open finding"));
   });
 });

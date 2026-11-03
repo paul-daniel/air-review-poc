@@ -32,3 +32,5 @@ export interface FindingCommentOptions {
  */
 export declare function renderFollowUpComment(finding: Finding, headSha: string, options?: FindingCommentOptions): string;
 export declare function renderFindingComment(finding: Finding, options?: FindingCommentOptions): string;
+/** Multi-line text, or a single line that reads as code rather than prose. */
+export declare function looksLikeCode(text: string): boolean;

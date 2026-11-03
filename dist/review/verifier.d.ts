@@ -40,3 +40,5 @@ export declare function llmVerify(provider: ModelProvider, model: string, candid
     }>;
     usage: Usage;
 }>;
+/** A remark that only says the code is right: nothing for the author to do. */
+export declare function isPraise(finding: Pick<CandidateFinding, "title" | "summary">): boolean;

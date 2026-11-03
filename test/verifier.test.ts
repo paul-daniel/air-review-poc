@@ -13,6 +13,7 @@ function candidate(overrides: Partial<CandidateFinding> = {}): CandidateFinding 
     scope: "IN_PR",
     title: "Test finding",
     summary: "A reasonably long summary of the finding for tests.",
+    suggestion: "Change the thing.",
     anchor: { file: "a.ts", startLine: 5, endLine: 5 },
     evidence: [],
     ...overrides,
@@ -44,6 +45,76 @@ describe("deterministicVerify", () => {
       added,
     );
     expect(result.findings).toHaveLength(1);
+  });
+
+  it("drops model findings that only say the code is correct", () => {
+    const added = new Map([["a.ts", new Set([5])]]);
+    const result = deterministicVerify(
+      config,
+      [
+        candidate({
+          ruleId: "truncation-ellipsis-clarity",
+          category: "maintainability",
+          title: "Truncation function appends ellipsis within max length correctly",
+          summary: "The function keeps length constraints and counts code points correctly, consistent with best practices.",
+          suggestion: undefined,
+        }),
+        candidate({
+          ruleId: "strings-helpers-have-tests",
+          category: "tests",
+          title: "Helpers have corresponding unit tests",
+          summary: "The new spec file verifies the helpers, consistent with existing repo practice.",
+          suggestion: "Keep it that way.",
+        }),
+        candidate({
+          ruleId: "angular.subscription",
+          title: "Subscription is not torn down properly",
+          summary: "The subscribe call in ngOnInit is never unsubscribed, so the handler outlives the component.",
+        }),
+      ],
+      added,
+      () => true,
+    );
+    expect(result.findings.map((f) => f.ruleId)).toEqual(["angular.subscription"]);
+    expect(result.dropped.map((d) => d.reason)).toEqual([
+      "describes correct code; nothing to change",
+      "describes correct code; nothing to change",
+    ]);
+  });
+
+  it("drops a model finding that asks for no change, keeps deterministic ones", () => {
+    const added = new Map([["a.ts", new Set([5])]]);
+    const model = deterministicVerify(config, [candidate({ suggestion: undefined })], added, () => true);
+    expect(model.findings).toHaveLength(0);
+    expect(model.dropped[0]?.reason).toBe("asks for no change");
+    const rule = deterministicVerify(config, [candidate({ suggestion: undefined })], added, () => false);
+    expect(rule.findings).toHaveLength(1);
+  });
+
+  it("does not trust the origin a model declares for itself", () => {
+    const added = new Map([["a.ts", new Set([5])]]);
+    const result = deterministicVerify(
+      config,
+      [
+        candidate({ ruleId: "r1", ruleOrigin: "FRAMEWORK", category: "maintainability", severity: "MINOR" }),
+        candidate({ ruleId: "r2", ruleOrigin: "REPO_CONVENTION", category: "tests", severity: "MINOR" }),
+        candidate({
+          ruleId: "r3",
+          ruleOrigin: "REPO_CONVENTION",
+          category: "consistency",
+          severity: "MINOR",
+          evidence: [{ kind: "code-example", label: "apps/web/src/app/features/orders/orders.store.ts does it this way" }],
+        }),
+      ],
+      added,
+      () => true,
+    );
+    const byRule = Object.fromEntries(result.findings.map((f) => [f.ruleId, f]));
+    expect(byRule.r1).toMatchObject({ ruleOrigin: "HEURISTIC", severity: "NITPICK" });
+    expect(byRule.r2).toMatchObject({ ruleOrigin: "HEURISTIC", severity: "NITPICK" });
+    expect(byRule.r3).toMatchObject({ ruleOrigin: "REPO_CONVENTION", severity: "MINOR" });
+    const kept = deterministicVerify(config, [candidate({ ruleOrigin: "FRAMEWORK" })], added, () => false);
+    expect(kept.findings[0]?.ruleOrigin).toBe("FRAMEWORK");
   });
 
   it("filters severities not in the publish list", () => {
@@ -129,6 +200,7 @@ describe("deterministicVerify dedupes model findings against deterministic ones"
       scope: "IN_PR",
       title: "t",
       summary: "s",
+      suggestion: "Fix it.",
       anchor: { file: "w.ts", startLine: 7, endLine: 7 },
       evidence: [],
       ...over,
@@ -171,6 +243,7 @@ describe("taste remarks never block", () => {
       scope: "IN_PR" as const,
       title: "Could be clearer",
       summary: "Naming could be clearer.",
+      suggestion: "Rename it.",
       anchor: { file: "a.ts", startLine: 3, endLine: 3 },
       evidence: [],
     };
@@ -193,6 +266,7 @@ describe("taste remarks never block", () => {
           ruleOrigin: "REPO_CONVENTION",
           category: "consistency",
           title: "Convention",
+          evidence: [{ kind: "code-example" as const, label: "b.ts names it the other way" }],
         },
       ],
       new Map([["a.ts", new Set([3])]]),
