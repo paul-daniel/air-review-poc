@@ -192,7 +192,11 @@ export async function runReview(options: ReviewOptions, deps: PipelineDeps): Pro
         `full re-review against the new base, previous findings reconciled.`,
     );
   }
-  const sameHead = previous?.pullRequest.headSha === snapshot.headSha && !baseMoved;
+  // A reviewer's dismissal changes the verdict even on an unchanged head: the
+  // run goes on (without any model call, the delta being empty) so the ledger,
+  // the summary and the vote reflect it.
+  const sameHead =
+    previous?.pullRequest.headSha === snapshot.headSha && !baseMoved && dismissedEvents.length === 0;
   const sameConfig =
     previous?.configuration.hash === configKey &&
     previous?.configuration.models &&
