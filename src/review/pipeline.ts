@@ -172,12 +172,12 @@ export async function runReview(options: ReviewOptions, deps: PipelineDeps): Pro
     try {
       const dismissed = await scm.listDismissedFindings();
       for (const finding of previous.findings) {
-        if (dismissed.has(finding.id) && finding.status !== "WONT_FIX") {
+        if (dismissed.has(finding.id) && finding.status !== "WONT_FIX" && finding.status !== "RESOLVED") {
           finding.status = "WONT_FIX";
           dismissedEvents.push({
             event: "dismissed",
             findingId: finding.id,
-            detail: "thread closed by a reviewer",
+            detail: "thread settled by a reviewer",
           });
         }
       }

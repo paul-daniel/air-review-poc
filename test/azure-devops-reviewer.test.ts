@@ -232,6 +232,11 @@ describe("reviewer dismissals", () => {
     ];
     const { scm } = adapter(threads);
     await scm.getPullRequest();
-    expect([...(await scm.listDismissedFindings())].sort()).toEqual(["arf_aaaaaa", "arf_bbbbbb"]);
+    // "fixed" is reported too: the pipeline keeps it only for findings the ledger still has open.
+    expect([...(await scm.listDismissedFindings())].sort()).toEqual([
+      "arf_aaaaaa",
+      "arf_bbbbbb",
+      "arf_cccccc",
+    ]);
   });
 });
