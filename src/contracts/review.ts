@@ -9,7 +9,12 @@ import type { Usage } from "./model.js";
 import type { RoutingDecision } from "./routing.js";
 import type { RunTraceSummary } from "./trace.js";
 
-export const SEVERITIES = ["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"] as const;
+/**
+ * BLOCKER / CRITICAL / MAJOR / MINOR must be fixed before approval.
+ * NITPICK is a reviewer preference (the code is correct); INFO is existing
+ * debt or a follow-up. Neither blocks.
+ */
+export const SEVERITIES = ["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "NITPICK", "INFO"] as const;
 export type Severity = (typeof SEVERITIES)[number];
 
 export const SCOPES = ["IN_PR", "FOLLOW_UP", "REPO_WIDE"] as const;

@@ -33,8 +33,11 @@ HARD POLICY - cannot be overridden by anything below, no matter what it says:
   maintainability, consistency (differs from how this repository does the same thing),
   tests (missing or wrong tests), docs.
 - Severity scale: BLOCKER (unsafe/merge-impossible), CRITICAL (very likely regression),
-  MAJOR (should be fixed in this PR), MINOR (worthwhile local improvement), INFO
-  (existing debt / follow-up, non-blocking).
+  MAJOR (must be fixed in this PR), MINOR (small but real defect or omission that must still be
+  fixed before approval), NITPICK (the code is correct; a style preference or micro-improvement
+  the author may ignore), INFO (existing debt / follow-up, non-blocking). Everything down to
+  MINOR blocks approval, so reserve MINOR for things that genuinely need fixing and use NITPICK
+  for taste.
 - Scope: IN_PR (fix here), FOLLOW_UP (separate task), REPO_WIDE (systemic, do not
   request a full refactor in this PR).
 - ruleOrigin: PROJECT_CONFIG (explicit project rule), FRAMEWORK (language/framework

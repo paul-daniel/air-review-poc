@@ -4,6 +4,8 @@ import type { CliContext } from "../context.js";
 import { printJson, printTable, printBanner, c } from "../output.js";
 import { resolveEndpoint } from "../../model/resolve.js";
 import { probeModels } from "../../model/probe.js";
+import { FoundryProvider } from "../../model/foundry.js";
+import { FoundryAgentProvider } from "../../model/foundry-agent.js";
 import { azureDevOpsToken } from "../../scm/detect.js";
 
 interface Check {
@@ -59,6 +61,7 @@ export async function runDoctor(ctx: CliContext, json: boolean): Promise<number>
 
   // Endpoint resolution (preset + overrides) and key presence
   let endpoint: ReturnType<typeof resolveEndpoint> | null = null;
+  let foundryKeyless = false;
   try {
     endpoint = resolveEndpoint(ctx.config);
     checks.push({
@@ -66,25 +69,45 @@ export async function runDoctor(ctx: CliContext, json: boolean): Promise<number>
       status: "ok",
       detail: `${endpoint.preset.label} · ${endpoint.baseUrl}`,
     });
-    checks.push(
-      endpoint.apiKey
-        ? {
-            name: "credential",
-            status: "ok",
-            detail: `${endpoint.apiKeyEnv ? `found in ${endpoint.apiKeyEnv}` : "configured inline"} · sent as ${
-              endpoint.apiKeyHeader === "authorization"
-                ? "Authorization: Bearer"
-                : `${endpoint.apiKeyHeader} header`
-            }`,
-          }
-        : {
-            name: "api key",
-            status: "warn",
-            detail: endpoint.apiKeyEnv
-              ? `no value in ${endpoint.apiKeyEnv}; requests may be rejected by the provider`
-              : "no API key configured; requests may be rejected by the provider",
-          },
-    );
+    const foundry =
+      ctx.provider instanceof FoundryProvider || ctx.provider instanceof FoundryAgentProvider
+        ? ctx.provider
+        : null;
+    if (foundry) {
+      // Microsoft Foundry: key, provided token, or keyless Entra ID through the official SDKs.
+      try {
+        const credential = await foundry.credential();
+        checks.push({ name: "credential", status: "ok", detail: credential.description });
+        foundryKeyless = credential.kind === "entra-id";
+      } catch (error) {
+        checks.push({
+          name: "credential",
+          status: "error",
+          detail: (error as Error).message,
+          exit: EXIT.MODEL,
+        });
+      }
+    } else {
+      checks.push(
+        endpoint.apiKey
+          ? {
+              name: "credential",
+              status: "ok",
+              detail: `${endpoint.apiKeyEnv ? `found in ${endpoint.apiKeyEnv}` : "configured inline"} · sent as ${
+                endpoint.apiKeyHeader === "authorization"
+                  ? "Authorization: Bearer"
+                  : `${endpoint.apiKeyHeader} header`
+              }`,
+            }
+          : {
+              name: "api key",
+              status: "warn",
+              detail: endpoint.apiKeyEnv
+                ? `no value in ${endpoint.apiKeyEnv}; requests may be rejected by the provider`
+                : "no API key configured; requests may be rejected by the provider",
+            },
+      );
+    }
   } catch (error) {
     checks.push({
       name: "endpoint",
@@ -99,7 +122,7 @@ export async function runDoctor(ctx: CliContext, json: boolean): Promise<number>
   // that is the only way to prove the key, the URL and the deployment names.
   if (endpoint && !endpoint.listModels) {
     const deployments = [...new Set(Object.values(ctx.models).filter((m): m is string => Boolean(m)))];
-    if (!endpoint.apiKey) {
+    if (!endpoint.apiKey && !foundryKeyless) {
       checks.push({
         name: ctx.provider.id,
         status: "warn",

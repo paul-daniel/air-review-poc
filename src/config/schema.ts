@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { PRESET_IDS } from "../model/presets.js";
 
-export const SEVERITY_LEVEL = z.enum(["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"]);
+export const SEVERITY_LEVEL = z.enum(["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "NITPICK", "INFO"]);
 
 export const PROVIDER_KIND = z.string().refine((value) => PRESET_IDS.includes(value), {
   message: `Unknown provider. Available: ${PRESET_IDS.join(", ")}`,
@@ -131,13 +131,19 @@ const contextSchema = z.object({
 const reviewSchema = z.object({
   severities: z
     .object({
-      publish: z.array(SEVERITY_LEVEL).default(["BLOCKER", "CRITICAL", "MAJOR", "MINOR"]),
+      publish: z.array(SEVERITY_LEVEL).default(["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "NITPICK"]),
     })
     .default({}),
   gate: z
     .object({
-      severities: z.array(SEVERITY_LEVEL).default(["BLOCKER", "CRITICAL"]),
-      minimumConfidence: z.number().min(0).max(1).default(0.9),
+      /**
+       * Severities that block approval while open. Everything down to MINOR
+       * must be fixed; NITPICK (reviewer preference) and INFO (existing debt,
+       * follow-ups) never block.
+       */
+      severities: z.array(SEVERITY_LEVEL).default(["BLOCKER", "CRITICAL", "MAJOR", "MINOR"]),
+      /** Findings below this confidence are published as suggestions but do not block. */
+      minimumConfidence: z.number().min(0).max(1).default(0.6),
     })
     .default({}),
   maxFindings: z.number().int().min(1).max(100).default(40),

@@ -44,7 +44,7 @@ describe("config loader", () => {
     const { config } = loadConfig(file);
     expect(config.models.roles.reviewer).toBe("llama3.1");
     expect(config.provider).toBe("openai");
-    expect(config.review.gate.minimumConfidence).toBe(0.9);
+    expect(config.review.gate.minimumConfidence).toBe(0.6);
   });
 
   it("rejects unknown keys with a helpful message", () => {

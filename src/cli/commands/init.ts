@@ -156,7 +156,7 @@ review:
     publish: [BLOCKER, CRITICAL, MAJOR, MINOR]
   gate:
     severities: [BLOCKER, CRITICAL]
-    minimumConfidence: 0.9
+    minimumConfidence: 0.6
   maxFindings: 40
 
 memory:

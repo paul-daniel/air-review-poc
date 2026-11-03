@@ -189,5 +189,5 @@ export function reconcile(
 }
 
 function severityRank(severity: Finding["severity"]): number {
-  return { BLOCKER: 0, CRITICAL: 1, MAJOR: 2, MINOR: 3, INFO: 4 }[severity];
+  return { BLOCKER: 0, CRITICAL: 1, MAJOR: 2, MINOR: 3, NITPICK: 4, INFO: 5 }[severity];
 }

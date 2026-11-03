@@ -14,6 +14,7 @@ const SEVERITY_ICON: Record<Severity, string> = {
   CRITICAL: "🛑",
   MAJOR: "🟠",
   MINOR: "🟡",
+  NITPICK: "⚪",
   INFO: "🔵",
 };
 

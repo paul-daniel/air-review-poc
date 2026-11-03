@@ -68,7 +68,7 @@ export function renderSummaryMarkdown(summary: ReviewSummary, options: SummaryRe
       "No open finding. " + (summary.resolved ? `${summary.resolved} earlier finding(s) resolved.` : ""),
     );
   } else if (findings.length === 0) {
-    const rows = (["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"] as const)
+    const rows = (["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "NITPICK", "INFO"] as const)
       .filter((severity) => (summary.counts[severity] ?? 0) > 0)
       .map((severity) => `| ${severityIcon(severity)} ${severity} | ${summary.counts[severity]} |`);
     lines.push("| Severity | Open |", "|---|---:|", ...rows);

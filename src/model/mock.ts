@@ -62,7 +62,7 @@ export class MockProvider implements ModelProvider {
 }
 
 const EXPECT_MARKER =
-  /^\+.*air-review:expect\s+(BLOCKER|CRITICAL|MAJOR|MINOR|INFO)\s+([a-z-]+)\s+([a-z0-9.-]+):\s*(.+?)\s*$/i;
+  /^\+.*air-review:expect\s+(BLOCKER|CRITICAL|MAJOR|MINOR|NITPICK|INFO)\s+([a-z-]+)\s+([a-z0-9.-]+):\s*(.+?)\s*$/i;
 
 function mockAnswer(prompt: string, shapeHint: string): unknown {
   if (/triage/i.test(shapeHint)) {

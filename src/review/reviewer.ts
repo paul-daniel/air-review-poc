@@ -13,7 +13,7 @@ import {
 
 const severityZ = z.preprocess(
   (value) => normalizeSeverityOrNull(value),
-  z.enum(["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"]),
+  z.enum(["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "NITPICK", "INFO"]),
 );
 const scopeZ = z.preprocess(
   (value) => normalizeEnum(value, ["IN_PR", "FOLLOW_UP", "REPO_WIDE"] as const) ?? "IN_PR",

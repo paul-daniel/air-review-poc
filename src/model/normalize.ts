@@ -7,7 +7,7 @@
  * variants and fall back to safe defaults.
  */
 
-export const SEVERITIES = ["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "INFO"] as const;
+export const SEVERITIES = ["BLOCKER", "CRITICAL", "MAJOR", "MINOR", "NITPICK", "INFO"] as const;
 export const EVIDENCE_KINDS = [
   "code-example",
   "convention",

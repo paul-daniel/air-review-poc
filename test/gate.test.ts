@@ -22,12 +22,12 @@ function finding(overrides: Partial<Finding> = {}): Finding {
 }
 
 describe("evaluateGate", () => {
-  it("blocks only gated severities above the confidence threshold", () => {
+  it("blocks every gated severity above the confidence threshold, never nitpicks", () => {
     const config = defaultConfig();
     const findings = [
       finding(),
       finding({ id: "arf_test02", confidence: 0.5 }),
-      finding({ id: "arf_test03", severity: "MAJOR" }),
+      finding({ id: "arf_test03", severity: "NITPICK" }),
       finding({ id: "arf_test04", status: "RESOLVED" }),
     ];
     const result = evaluateGate(config, findings);
