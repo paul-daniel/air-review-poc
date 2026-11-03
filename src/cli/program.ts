@@ -16,6 +16,7 @@ import { runCacheStats, runCachePrune } from "./commands/cache.js";
 import { runConfigGet, runConfigList, runConfigSet, runConfigUnset } from "./commands/config.js";
 import { renderExamples, EXAMPLE_TOPICS } from "./commands/example.js";
 import { runTelemetry } from "./commands/telemetry.js";
+import { runApprove } from "./commands/approve.js";
 import { CI_MODES, type CiMode } from "../scm/detect.js";
 
 function examples(lines: string[]): string {
@@ -322,6 +323,42 @@ export function buildProgram(): Command {
     .action(
       runCatching((topic: string | undefined, options: Record<string, unknown>) => {
         process.stdout.write(`${renderExamples(topic, Boolean(options.all))}\n`);
+      }),
+    );
+
+  addScmOptions(
+    program
+      .command("approve")
+      .description(
+        "Cast the approving vote from the review already in the pull request (run after build and tests)",
+      )
+      .option("--dry-run", "say what would be voted, cast nothing")
+      .option("--json", "machine-readable output"),
+  )
+    .addHelpText(
+      "after",
+      examples([
+        "air-review approve                      # in the pipeline, with condition: succeeded()",
+        "air-review approve --ci azure-devops --org https://dev.azure.com/acme --project Shop --repo storefront --pr 483 --dry-run",
+      ]),
+    )
+    .action(
+      runCatching(async (options: Record<string, unknown>) => {
+        const ctx = await buildContext({
+          configPath: configPath(program),
+          requireModels: false,
+          ci: options.ci as CiMode,
+          owner: options.owner as string | undefined,
+          repo: options.repo as string | undefined,
+          pr: options.pr ? Number(options.pr) : undefined,
+          base: options.base as string | undefined,
+          org: options.org as string | undefined,
+          project: options.project as string | undefined,
+        });
+        process.exitCode = await runApprove(ctx, {
+          json: Boolean(options.json),
+          dryRun: Boolean(options.dryRun),
+        });
       }),
     );
 

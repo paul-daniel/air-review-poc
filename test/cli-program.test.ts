@@ -27,6 +27,7 @@ describe("CLI structure", () => {
       "models",
       "review",
       "dry-run",
+      "approve",
       "inspect",
       "explain",
       "example",

@@ -1,20 +1,29 @@
 # Azure Pipelines: air-review as a pull-request reviewer (build validation).
 #
 # Attach this pipeline to the target branch as a *build validation* policy
-# (Project settings → Repositories → Policies → Branch policies). Exit code 10
-# (blocking findings) fails the validation; 20/30/40/50 are tool or
-# infrastructure errors and fail the build too, with the reason in the log.
+# (Project settings → Repositories → Policies → Branch policies).
+#
+# How the steps relate, like a human reviewer would work:
+#   1. "Air Review" reviews early, on every push, only what changed since the
+#      last reviewed commit. It comments in the pull request and votes
+#      "waiting for author" when a blocking finding is open (exit code 10,
+#      which fails this step).
+#   2. Your own build and tests run (put your real steps there).
+#   3. "Approve" runs only if the review, the build and the tests all
+#      succeeded, and casts the approving vote. It never completes the PR.
+# Exit codes 20/30/40/50 are tool or infrastructure errors; the log says why.
 #
 # Variable group `air-review` (Pipelines → Library):
 #   AIR_REVIEW_PROVIDER              azure-foundry
 #   AIR_REVIEW_BASE_URL              https://<resource>.services.ai.azure.com
-#   AIR_REVIEW_MODEL_TRIAGE          <cheap deployment>
+#   AIR_REVIEW_MODEL_TRIAGE          <cheap deployment, e.g. gpt-5-mini or claude-haiku-4-5>
 #   AIR_REVIEW_MODEL_REVIEWER        <standard deployment>
 #   AIR_REVIEW_MODEL_VERIFIER        <cheap deployment>
 #   AIR_REVIEW_MODEL_REVIEWER_LIGHT  <cheap deployment>
-#   AIR_REVIEW_MODEL_REVIEWER_HEAVY  <strong deployment>
+#   AIR_REVIEW_MODEL_REVIEWER_HEAVY  <strong deployment, e.g. gpt-5 or claude-sonnet-4-5>
 #   AIR_REVIEW_PRICING               {"<deployment>":{"input":..,"cachedInput":..,"output":..}}
-#   AIR_REVIEW_API_KEY  (secret)     Foundry API key  — or use the AzureCLI step below for Entra ID
+#   AIR_REVIEW_API_KEY  (secret)     Foundry API key — or use the AzureCLI step below for keyless Entra ID
+# Claude deployments are recognised by their name (claude-…) or with the prefix claude:<deployment>.
 
 trigger: none # run from the branch policy, not on push
 pr:
@@ -37,18 +46,14 @@ steps:
       versionSpec: "22.x"
     displayName: Use Node 22
 
-  # Option 1: install from the GitHub repository (no npm registry publication needed).
   - script: npm install -g github:paul-daniel/air-review-poc
     displayName: Install air-review
 
-  # Option 2: build from a second repository checked out in the job (see docs/azure-devops.md).
-  # - checkout: git://air-review-test/air-review-poc@main
-  # - script: cd $(Build.SourcesDirectory)/air-review-poc && npm ci && npm run build && npm link
-
-  # Optional, keyless Foundry access with a service connection (Entra ID).
-  # The identity needs the inference role on the Foundry resource.
+  # Optional, keyless Foundry access through a service connection (Microsoft Entra ID).
+  # With this step you can leave AIR_REVIEW_API_KEY empty. The identity needs the
+  # "Azure AI User" role on the Foundry resource.
   # - task: AzureCLI@2
-  #   displayName: Get a Foundry token
+  #   displayName: Sign in to Azure for air-review
   #   inputs:
   #     azureSubscription: <service connection>
   #     scriptType: bash
@@ -57,19 +62,26 @@ steps:
   #       token=$(az account get-access-token --scope https://ai.azure.com/.default --query accessToken -o tsv)
   #       echo "##vso[task.setvariable variable=AIR_REVIEW_ACCESS_TOKEN;issecret=true]$token"
 
-  - script: air-review doctor --plain
-    displayName: Check configuration and deployments
-    env:
-      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-      AIR_REVIEW_API_KEY: $(AIR_REVIEW_API_KEY)
-
   - script: air-review review --publish --plain
     displayName: Air Review
     env:
-      SYSTEM_ACCESSTOKEN: $(System.AccessToken) # the job token is not exported by default
-      AIR_REVIEW_API_KEY: $(AIR_REVIEW_API_KEY) # secret variables are never exported to scripts either
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken) # the job token: comments and votes as the build service
+      AIR_REVIEW_API_KEY: $(AIR_REVIEW_API_KEY) # secret variables are never exported to scripts by default
 
   - publish: $(Build.SourcesDirectory)/.air-review/reports
     artifact: air-review-reports
     condition: succeededOrFailed()
     displayName: Keep the run report (cost per step, workflow diagram)
+
+  # ---- Your own quality steps go here (keep what your project really has). ----
+  - script: echo "npm ci && npm run build"
+    displayName: Build
+  - script: echo "npm test"
+    displayName: Tests
+
+  # Approval: only when the review, the build and the tests succeeded.
+  - script: air-review approve --plain
+    displayName: Approve the pull request
+    condition: succeeded()
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)

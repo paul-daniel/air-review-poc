@@ -516,9 +516,20 @@ export async function runReview(options: ReviewOptions, deps: PipelineDeps): Pro
     const voteStep = trace.begin("verdict", `Verdict: ${summary.verdict}`);
     await scm.upsertSummary(summary, findings);
     if (published && !stale && scm.castVote) {
+      const deferred =
+        config.platform.azureDevops.vote.mode === "pipeline" && summary.verdict !== "request-changes";
       try {
-        await scm.castVote(summary);
-        voteStep.end("done", { detail: `vote cast: ${summary.verdict}` });
+        if (deferred) {
+          // Approval is the pipeline's last word: `air-review approve` runs once
+          // build and tests have passed too. Only "changes requested" is cast now.
+          await scm.castVote({ ...summary, verdict: "comment" });
+          voteStep.end("done", {
+            detail: "no vote yet: approval is cast by `air-review approve` after build and tests",
+          });
+        } else {
+          await scm.castVote(summary);
+          voteStep.end("done", { detail: `vote cast: ${summary.verdict}` });
+        }
       } catch (error) {
         warnings.push(`Could not cast the reviewer vote: ${(error as Error).message}`);
         voteStep.end("failed", { detail: (error as Error).message });

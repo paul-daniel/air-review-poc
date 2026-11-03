@@ -210,6 +210,14 @@ const platformSchema = z.object({
         .object({
           enabled: z.boolean().default(true),
           approveWithSuggestions: z.boolean().default(true),
+          /**
+           * "pipeline" (default): the review step only ever votes *against*
+           * (waiting for author); the approving vote is cast by a separate
+           * `air-review approve` step that the pipeline runs once the review,
+           * the build and the tests have all succeeded. "immediate": the review
+           * step casts the final vote itself (single-step pipelines).
+           */
+          mode: z.enum(["pipeline", "immediate"]).default("pipeline"),
         })
         .default({}),
       /** Optional pull-request status (`air-review/gate`) usable by a "Status" branch policy. */
