@@ -1,137 +1,97 @@
-# Getting started
+# Getting started: your repository reviewed by air-review in 30 minutes
 
-This tutorial takes you from a fresh clone to a first real review in about fifteen minutes. You will:
+You have a repository on Azure DevOps and models on Microsoft Foundry. At the
+end of this guide, every pull request gets reviewed, commented, and approved
+or sent back, automatically. You do not need to know how the tool works
+inside. Four parts, each ends with a check.
 
-1. install `air-review` from the repository;
-2. run a free, offline review on the demo corpus (no API key, no model call);
-3. run a first real review with a model provider;
-4. read the output and the files it writes.
+_Version française : [Démarrage](/fr/guide/getting-started)._
 
-## Prerequisites
+## Part 1 — Foundry: two models and one address (10 min)
 
-- Node.js 22.12 or newer (`node --version`).
-- Git.
-- For step 3 only: an API key or token for one model provider. The [integration guides](/integrations/microsoft-foundry) explain how to get one.
+1. Open [ai.azure.com](https://ai.azure.com) with the **New Foundry** toggle on.
+2. Create a Foundry resource (or reuse one). Note its name.
+3. In **Discover → Models**, deploy **two** models with **Default settings**:
+   - a cheap one, for small changes and checks (for example `gpt-5-mini` or `claude-haiku-4-5`);
+   - a strong one, for large changes (for example `gpt-5` or `claude-sonnet-4-5`).
+     Keep the deployment names: you will type them in part 3.
+4. In the resource's **Overview**, copy the endpoint that looks like
+   `https://<resource>.services.ai.azure.com` and, if you prefer keys over
+   sign-in, one **API key**.
 
-## 1. Install from the repository
+**Check:** the two deployments show **Succeeded** in **Models + endpoints**.
 
-The tool is a TypeScript project. Build it once, then link the `air-review` command into your shell.
-
-```bash
-git clone <url-of-the-air-review-repository> air-review
-cd air-review
-npm install
-npm run build
-npm link
-```
-
-Check the command is available:
+## Part 2 — Your machine: one dry run (5 min)
 
 ```bash
-air-review --version
-air-review --help
+npm install -g github:paul-daniel/air-review-poc   # needs Node 22
+cd your-repository
+az login                                            # or: export AIR_REVIEW_API_KEY=<key>
+air-review init --provider azure-foundry --base-url https://<resource>.services.ai.azure.com --ci azure-devops
 ```
 
-::: tip
-`npm link` creates a global symlink to this checkout. After you pull new commits, run `npm run build` again; the linked command picks up the new build immediately.
-:::
-
-## 2. The free local dry-run
-
-The repository ships a generator for a small Git corpus with known defects. It costs nothing to run and needs no provider.
+Open the generated `air-review.yaml` and put your two deployment names in
+`models` (`reviewer`, `tiers.light.reviewer`, `tiers.heavy.reviewer`,
+`triage`, `verifier`). A Claude deployment is recognised by its name
+(`claude-…`); otherwise write it as `claude:<deployment>`.
 
 ```bash
-npm run demo
+air-review doctor                 # everything green?
+air-review dry-run --base origin/main   # reviews your current branch, publishes nothing
 ```
 
-The command creates `test/fixtures/work/airreview-demo`, a Git repository checked out at the tag `demo-01-bugs` (the scenarios were committed on a branch named `demo-scenarios`). The base branch is `main`. The corpus contains:
+**Check:** `doctor` shows the credential it uses and probes each deployment;
+`dry-run` prints a routing line ("light tier → …"), the findings, and the
+cost. Commit `air-review.yaml`.
 
-- `src/app/widget.component.ts`: a subscription that is never torn down (a deterministic rule catches this);
-- `src/app/price.ts`: a discount formula that divides by 1 instead of 100, with a prompt-injection comment on top (only a model catches this);
-- `src/app/safe.component.ts` and `src/app/legacy.component.ts`: a correct component and pre-existing debt that must not be flagged as new.
+## Part 3 — Azure DevOps: the pipeline (10 min)
 
-Move into the corpus and run the deterministic rules only. `--deterministic-only` makes zero model calls:
+1. Copy [examples/azure-pipelines.yml](https://github.com/paul-daniel/air-review-poc/blob/main/examples/azure-pipelines.yml) to the
+   root of your repository as `azure-pipelines.yml`. Replace the two `echo`
+   lines by your real build and test commands (or delete them).
+2. **Pipelines → Library → + Variable group** named `air-review` with:
 
-```bash
-cd test/fixtures/work/airreview-demo
-air-review inspect --base main
-air-review dry-run --base main --deterministic-only
-```
+   | Name                                                   | Value                                                                   |
+   | ------------------------------------------------------ | ----------------------------------------------------------------------- |
+   | `AIR_REVIEW_PROVIDER`                                  | `azure-foundry`                                                         |
+   | `AIR_REVIEW_BASE_URL`                                  | `https://<resource>.services.ai.azure.com`                              |
+   | `AIR_REVIEW_API_KEY` (lock icon)                       | the API key, or leave it out and use the Azure sign-in step in the YAML |
+   | `AIR_REVIEW_MODEL_REVIEWER`                            | strong deployment                                                       |
+   | `AIR_REVIEW_MODEL_REVIEWER_LIGHT`                      | cheap deployment                                                        |
+   | `AIR_REVIEW_MODEL_REVIEWER_HEAVY`                      | strong deployment                                                       |
+   | `AIR_REVIEW_MODEL_TRIAGE`, `AIR_REVIEW_MODEL_VERIFIER` | cheap deployment                                                        |
 
-What to expect:
+3. **Pipelines → New pipeline → Azure Repos Git → your repository → Existing YAML file** → `azure-pipelines.yml` → Save (do not run yet).
+4. **Project settings → Repositories → your repository → Security**: select
+   **`<Project> Build Service (<Organization>)`** and set **Contribute to pull
+   requests** to _Allow_.
+5. **Project settings → Repositories → your repository → Policies → Branch policies → `main` → Build validation → +**: pick the pipeline, trigger _Automatic_, policy _Required_.
 
-- `inspect` prints the changed files, the structural facts and the context plan (which existing files would be shown to a model, and why). No model is called.
-- `dry-run --deterministic-only` reports one MAJOR finding on `widget.component.ts`. `safe.component.ts` and `legacy.component.ts` stay clean. The exit code is `0`, because the default gate only blocks on `BLOCKER` and `CRITICAL`.
+**Check:** no error on save. If your organisation has no hosted agents yet
+("No hosted parallelism"), request the free grant or register a self-hosted
+agent (see [Azure DevOps](/integrations/azure-devops)).
 
-The corpus has four tagged scenarios. `git checkout demo-02-unrelated`, `demo-03-fixed` and `demo-04-reopened` let you watch a finding stay open, get resolved, then reopen with the same id. The file `.demo/expected.md` in the corpus explains what each scenario should produce.
+## Part 4 — First pull request (5 min)
 
-## 3. A first real review
+Create a branch, change a file, push, open a pull request to `main`. Within a
+few minutes you see:
 
-Pick a provider and export its variables. The example below uses OpenAI; every other provider works the same way with a different preset id and key variable (see [Other providers](/integrations/other-providers), [Microsoft Foundry](/integrations/microsoft-foundry) or [Amazon Bedrock](/integrations/amazon-bedrock)).
+- a comment **Air Review — …** with the verdict first, which model reviewed and why, the findings table, and the cost per step (collapsed);
+- one thread per finding on the exact line, with the fix;
+- the reviewer vote: _Waiting for author_ if something blocks, _Approved_ once review, build and tests are green;
+- the run report in the pipeline artifacts.
 
-```bash
-export AIR_REVIEW_PROVIDER=openai
-export OPENAI_API_KEY=sk-...
-export AIR_REVIEW_MODEL_REVIEWER=gpt-4.1
-export AIR_REVIEW_MODEL_VERIFIER=gpt-4o-mini
-```
+Push a fix: only the changed lines are reviewed, resolved threads get a
+"Resolved" reply, a partial fix gets the next step in the same thread.
 
-::: warning Keys never go into files you commit
-Export keys in your shell or put them in a `.env` file that is listed in `.gitignore`. The [local developer guide](/integrations/local-developer) shows a safe setup with `.env` and direnv.
-:::
+## When something goes wrong
 
-Check everything before paying for a token:
+| Symptom                                       | What to do                                                          |
+| --------------------------------------------- | ------------------------------------------------------------------- |
+| `doctor` says the credential is missing       | `az login`, or set `AIR_REVIEW_API_KEY`                             |
+| `doctor` probe fails with 404                 | the deployment name in `air-review.yaml` does not match the portal  |
+| pipeline: HTTP 403 when publishing            | step 4 of part 3 (Contribute to pull requests)                      |
+| pipeline: "No hosted parallelism"             | request the grant or use a self-hosted agent                        |
+| the review found nothing on a bug you planted | check the tier in the summary; force `--tier heavy` once to compare |
 
-```bash
-air-review doctor
-```
-
-`doctor` prints the resolved endpoint, the variable the credential was read from, the models each role uses, and the state of Git and the SCM adapter. On endpoints without a model listing (Azure) it sends one tiny probe per deployment instead.
-
-Then run the full review, still without publishing anything:
-
-```bash
-air-review dry-run --base main
-```
-
-With a capable reviewer model you get two findings: the deterministic subscription finding and a CRITICAL finding on `price.ts` (the discount formula). The prompt-injection comment in `price.ts` must not change the result.
-
-## 4. Reading the output
-
-A finding shows, in this order:
-
-1. severity, file, line range and a short title;
-2. the source code of the affected range, syntax-highlighted, taken from the reviewed revision;
-3. the explanation, then a fix example when the model proposes one;
-4. a secondary line with the confidence (0 to 1), the rule origin (`PROJECT_CONFIG`, `FRAMEWORK`, `REPO_CONVENTION`, `HEURISTIC`) and the scope (`IN_PR`, `FOLLOW_UP`, `REPO_WIDE`).
-
-The header separates the number of findings from the policy result: "gate passed" or "gate failed". The last block, "Usage & cost", lists input, cached input, output and reasoning tokens per role, the number of API calls, the duration, and a dollar estimate when pricing is configured (see [Choosing models](/concepts/choosing-models)).
-
-Useful switches:
-
-```bash
-air-review dry-run --base main --json > run.json   # machine-readable result
-air-review dry-run --base main --plain              # ASCII logs for CI
-air-review explain                                  # list stored findings
-air-review explain arf_7d0b9f                       # one finding with its evidence
-```
-
-## 5. What `.air-review/` contains
-
-Every local review writes to `.air-review/` in the reviewed repository. `air-review init` adds this folder to `.gitignore`; add it yourself if you skipped `init`.
-
-| File              | Purpose                                                                                       |
-| ----------------- | --------------------------------------------------------------------------------------------- |
-| `state.json`      | The local ledger: reviewed SHAs, findings, their ids and lifecycle (open, resolved, reopened) |
-| `summary.md`      | The human-readable summary of the last run, the same table that would be posted to a PR       |
-| `context.md`      | What was sent to the model: exemplars, related modules, repository profile                    |
-| `telemetry.jsonl` | One JSON line per run: tokens, calls, cost estimate, duration, gate result                    |
-| `cache/`          | Content-addressed cache of model results; safe to delete at any time                          |
-
-On GitHub and Azure DevOps the ledger lives in the pull request instead (comments or threads); `.air-review/` then only holds the cache, the telemetry log and the local summaries.
-
-## Next steps
-
-- Put it in a pipeline: [Azure DevOps](/integrations/azure-devops) or [GitHub Actions](/integrations/github-actions).
-- Understand what the model sees and why: [Contextual awareness](/concepts/contextual-awareness).
-- Tune the gate and the models: [Configuration](/reference/configuration), [Choosing models](/concepts/choosing-models).
+Everything else: [Azure DevOps](/integrations/azure-devops), [Microsoft Foundry](/integrations/microsoft-foundry), [Troubleshooting](/troubleshooting).

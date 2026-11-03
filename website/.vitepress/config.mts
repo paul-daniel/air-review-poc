@@ -5,7 +5,7 @@ import { defineConfig, type DefaultTheme } from "vitepress";
  * (https://<owner>.github.io/air-review/). Change this one constant if the
  * site moves to a custom domain ("/") or to another repository name.
  */
-const BASE = "/air-review/";
+const BASE = "/air-review-poc/";
 
 const enNav: DefaultTheme.NavItem[] = [
   { text: "Get started", link: "/guide/getting-started" },

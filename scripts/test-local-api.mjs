@@ -18,7 +18,11 @@ let lastReviewPrompt = "";
 const server = http.createServer(async (req, res) => {
   let body = "";
   for await (const chunk of req) body += chunk;
-  if (req.url !== "/openai/v1/chat/completions" || req.headers["api-key"] !== "local-test-key") {
+  // The official OpenAI SDK sends the Foundry key as `Authorization: Bearer <key>`
+  // (the documented v1 route accepts it); the legacy `api-key` header is tolerated.
+  const authorized =
+    req.headers.authorization === "Bearer local-test-key" || req.headers["api-key"] === "local-test-key";
+  if (req.url !== "/openai/v1/chat/completions" || !authorized) {
     res.writeHead(401);
     res.end("{}");
     return;
@@ -95,7 +99,8 @@ const check = (label, fn) => {
 try {
   let result = await run();
   check("Foundry API key, deployment, compatible reasoning parameters", () => {
-    assert.equal(result.code, 0);
+    // The corpus carries a MAJOR subscription leak, which blocks approval (exit 10).
+    assert.equal(result.code, 10);
     assert.equal(requests.length, 2);
     assert.equal(requests[0].model, "test-deployment");
     assert.equal(requests[0].max_completion_tokens, 16384);
@@ -130,7 +135,7 @@ try {
   });
   result = await run("--force", "--no-cache");
   check("--force re-reviews the complete PR diff", () => {
-    assert.equal(result.code, 0);
+    assert.equal(result.code, 10); // the MAJOR leak still blocks
     assert.ok(lastReviewPrompt.includes("diff --git"));
     assert.equal(widget(result.data)?.id, id);
   });

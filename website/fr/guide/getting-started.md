@@ -1,137 +1,100 @@
-# Premiers pas
+# Démarrage : votre dépôt relu par air-review en 30 minutes
 
-Ce tutoriel vous mène d'un clone vierge à une première vraie revue en un quart d'heure environ. Vous allez :
+Vous avez un dépôt sur Azure DevOps et des modèles sur Microsoft Foundry. À la
+fin de ce guide, chaque pull request est relue, commentée, puis approuvée ou
+renvoyée à son auteur, automatiquement. Vous n'avez pas besoin de savoir
+comment l'outil fonctionne à l'intérieur. Quatre parties, chacune finit par une
+vérification.
 
-1. installer `air-review` depuis le dépôt ;
-2. lancer une revue gratuite et hors ligne sur le corpus de démonstration (sans clé, sans appel au modèle) ;
-3. lancer une première vraie revue avec un fournisseur de modèles ;
-4. lire le résultat et les fichiers produits.
+_English version: [Getting started](/guide/getting-started)._
 
-## Prérequis
+## Partie 1 — Foundry : deux modèles et une adresse (10 min)
 
-- Node.js 22.12 ou plus récent (`node --version`).
-- Git.
-- Pour l'étape 3 seulement : une clé d'API ou un jeton pour un fournisseur de modèles. Les [guides d'intégration](/fr/integrations/microsoft-foundry) expliquent comment l'obtenir.
+1. Ouvrez [ai.azure.com](https://ai.azure.com) avec l'interrupteur **New Foundry** activé.
+2. Créez une ressource Foundry (ou réutilisez-en une). Notez son nom.
+3. Dans **Discover → Models**, déployez **deux** modèles avec **Default settings** :
+   - un petit, pour les changements simples et les vérifications (par exemple `gpt-5-mini` ou `claude-haiku-4-5`) ;
+   - un fort, pour les gros changements (par exemple `gpt-5` ou `claude-sonnet-4-5`).
+     Gardez les noms des déploiements : vous les saisirez en partie 3.
+4. Dans la page **Overview** de la ressource, copiez l'adresse de la forme
+   `https://<ressource>.services.ai.azure.com` et, si vous préférez une clé à
+   la connexion Azure, une **clé API**.
 
-## 1. Installer depuis le dépôt
+**Vérification :** les deux déploiements affichent **Succeeded** dans **Models + endpoints**.
 
-L'outil est un projet TypeScript. Compilez-le une fois, puis liez la commande `air-review` dans votre shell.
-
-```bash
-git clone <url-du-depot-air-review> air-review
-cd air-review
-npm install
-npm run build
-npm link
-```
-
-Vérifiez que la commande répond :
+## Partie 2 — Votre machine : un essai à blanc (5 min)
 
 ```bash
-air-review --version
-air-review --help
+npm install -g github:paul-daniel/air-review-poc   # Node 22 nécessaire
+cd votre-depot
+az login                                            # ou : export AIR_REVIEW_API_KEY=<clé>
+air-review init --provider azure-foundry --base-url https://<ressource>.services.ai.azure.com --ci azure-devops
 ```
 
-::: tip
-`npm link` crée un lien symbolique global vers ce clone. Après avoir récupéré de nouveaux commits, relancez `npm run build` ; la commande liée utilise immédiatement la nouvelle version.
-:::
-
-## 2. La revue locale gratuite
-
-Le dépôt fournit un générateur de petit corpus Git avec des défauts connus. Il ne coûte rien et ne demande aucun fournisseur.
+Ouvrez le fichier `air-review.yaml` créé et mettez vos deux noms de
+déploiement dans `models` (`reviewer`, `tiers.light.reviewer`,
+`tiers.heavy.reviewer`, `triage`, `verifier`). Un déploiement Claude est
+reconnu à son nom (`claude-…`) ; sinon écrivez-le `claude:<déploiement>`.
 
 ```bash
-npm run demo
+air-review doctor                        # tout est vert ?
+air-review dry-run --base origin/main    # relit votre branche, ne publie rien
 ```
 
-La commande crée `test/fixtures/work/airreview-demo`, un dépôt Git positionné sur le tag `demo-01-bugs` (les scénarios ont été commités sur une branche `demo-scenarios`). La branche de base est `main`. Le corpus contient :
+**Vérification :** `doctor` indique l'identifiant utilisé et teste chaque
+déploiement ; `dry-run` affiche une ligne de routage (« light tier → … »), les
+remarques et le coût. Commitez `air-review.yaml`.
 
-- `src/app/widget.component.ts` : un abonnement jamais libéré (une règle déterministe le détecte) ;
-- `src/app/price.ts` : une formule de remise qui divise par 1 au lieu de 100, surmontée d'un commentaire d'injection de prompt (seul un modèle le détecte) ;
-- `src/app/safe.component.ts` et `src/app/legacy.component.ts` : un composant correct et une dette préexistante qui ne doivent pas être signalés comme nouveaux.
+## Partie 3 — Azure DevOps : la pipeline (10 min)
 
-Placez-vous dans le corpus et lancez uniquement les règles déterministes. `--deterministic-only` ne fait aucun appel au modèle :
+1. Copiez [examples/azure-pipelines.yml](https://github.com/paul-daniel/air-review-poc/blob/main/examples/azure-pipelines.yml) à
+   la racine de votre dépôt sous le nom `azure-pipelines.yml`. Remplacez les
+   deux lignes `echo` par vos vraies commandes de build et de tests (ou supprimez-les).
+2. **Pipelines → Library → + Variable group** nommé `air-review` avec :
 
-```bash
-cd test/fixtures/work/airreview-demo
-air-review inspect --base main
-air-review dry-run --base main --deterministic-only
-```
+   | Nom                                                    | Valeur                                                                 |
+   | ------------------------------------------------------ | ---------------------------------------------------------------------- |
+   | `AIR_REVIEW_PROVIDER`                                  | `azure-foundry`                                                        |
+   | `AIR_REVIEW_BASE_URL`                                  | `https://<ressource>.services.ai.azure.com`                            |
+   | `AIR_REVIEW_API_KEY` (cadenas)                         | la clé API, ou rien si vous activez l'étape de connexion Azure du YAML |
+   | `AIR_REVIEW_MODEL_REVIEWER`                            | déploiement fort                                                       |
+   | `AIR_REVIEW_MODEL_REVIEWER_LIGHT`                      | déploiement petit                                                      |
+   | `AIR_REVIEW_MODEL_REVIEWER_HEAVY`                      | déploiement fort                                                       |
+   | `AIR_REVIEW_MODEL_TRIAGE`, `AIR_REVIEW_MODEL_VERIFIER` | déploiement petit                                                      |
 
-Ce qu'il faut attendre :
+3. **Pipelines → New pipeline → Azure Repos Git → votre dépôt → Existing YAML file** → `azure-pipelines.yml` → Save (sans lancer).
+4. **Project settings → Repositories → votre dépôt → Security** : sélectionnez
+   **`<Projet> Build Service (<Organisation>)`** et mettez **Contribute to pull
+   requests** sur _Allow_.
+5. **Project settings → Repositories → votre dépôt → Policies → Branch policies → `main` → Build validation → +** : choisissez la pipeline, déclenchement _Automatic_, stratégie _Required_.
 
-- `inspect` affiche les fichiers modifiés, les faits structurels et le plan de contexte (quels fichiers existants seraient montrés à un modèle, et pourquoi). Aucun modèle n'est appelé.
-- `dry-run --deterministic-only` rapporte un constat MAJOR sur `widget.component.ts`. `safe.component.ts` et `legacy.component.ts` restent propres. Le code de sortie est `0`, car la barrière par défaut ne bloque que sur `BLOCKER` et `CRITICAL`.
+**Vérification :** aucune erreur à l'enregistrement. Si votre organisation n'a
+pas encore d'agents hébergés (« No hosted parallelism »), demandez la
+dotation gratuite ou installez un agent auto-hébergé (voir
+[Azure DevOps](/fr/integrations/azure-devops)).
 
-Le corpus a quatre scénarios étiquetés. `git checkout demo-02-unrelated`, `demo-03-fixed` et `demo-04-reopened` permettent de voir un constat rester ouvert, être résolu, puis se rouvrir avec le même identifiant. Le fichier `.demo/expected.md` du corpus décrit ce que chaque scénario doit produire.
+## Partie 4 — Première pull request (5 min)
 
-## 3. Une première vraie revue
+Créez une branche, modifiez un fichier, poussez, ouvrez une pull request vers
+`main`. Au bout de quelques minutes vous voyez :
 
-Choisissez un fournisseur et exportez ses variables. L'exemple ci-dessous utilise OpenAI ; tout autre fournisseur fonctionne de la même façon avec un autre identifiant de preset et une autre variable de clé (voir [Autres fournisseurs](/fr/integrations/other-providers), [Microsoft Foundry](/fr/integrations/microsoft-foundry) ou [Amazon Bedrock](/fr/integrations/amazon-bedrock)).
+- un commentaire **Air Review — …** avec le verdict en premier, quel modèle a relu et pourquoi, le tableau des remarques et le coût par étape (replié) ;
+- un fil par remarque sur la ligne exacte, avec le correctif ;
+- le vote du reviewer : _Waiting for author_ si quelque chose bloque, _Approved_ quand revue, build et tests sont verts ;
+- le rapport d'exécution dans les artefacts de la pipeline.
 
-```bash
-export AIR_REVIEW_PROVIDER=openai
-export OPENAI_API_KEY=sk-...
-export AIR_REVIEW_MODEL_REVIEWER=gpt-4.1
-export AIR_REVIEW_MODEL_VERIFIER=gpt-4o-mini
-```
+Poussez une correction : seules les lignes modifiées sont relues, les fils
+résolus reçoivent une réponse « Resolved », une correction partielle reçoit
+l'étape suivante dans le même fil.
 
-::: warning Les clés ne vont jamais dans un fichier commité
-Exportez les clés dans votre shell ou placez-les dans un fichier `.env` listé dans `.gitignore`. Le [guide du poste de développeur](/fr/integrations/local-developer) montre une installation sûre avec `.env` et direnv.
-:::
+## Si quelque chose ne va pas
 
-Vérifiez tout avant de payer le moindre jeton :
+| Symptôme                                       | Quoi faire                                                                       |
+| ---------------------------------------------- | -------------------------------------------------------------------------------- |
+| `doctor` dit qu'il manque l'identifiant        | `az login`, ou définissez `AIR_REVIEW_API_KEY`                                   |
+| la sonde de `doctor` échoue en 404             | le nom de déploiement dans `air-review.yaml` ne correspond pas au portail        |
+| pipeline : HTTP 403 à la publication           | étape 4 de la partie 3 (Contribute to pull requests)                             |
+| pipeline : « No hosted parallelism »           | demandez la dotation ou utilisez un agent auto-hébergé                           |
+| la revue n'a rien trouvé sur un bug volontaire | regardez le tier dans la synthèse ; forcez `--tier heavy` une fois pour comparer |
 
-```bash
-air-review doctor
-```
-
-`doctor` affiche le point de terminaison résolu, la variable d'où vient l'identifiant, les modèles de chaque rôle, ainsi que l'état de Git et de l'adaptateur SCM. Sur les points de terminaison sans liste de modèles (Azure), il envoie une minuscule requête de test par déploiement.
-
-Lancez ensuite la revue complète, toujours sans rien publier :
-
-```bash
-air-review dry-run --base main
-```
-
-Avec un modèle relecteur capable, vous obtenez deux constats : l'abonnement non libéré (déterministe) et un constat CRITICAL sur `price.ts` (la formule de remise). Le commentaire d'injection de prompt dans `price.ts` ne doit rien changer au résultat.
-
-## 4. Lire le résultat
-
-Un constat affiche, dans cet ordre :
-
-1. la sévérité, le fichier, la plage de lignes et un titre court ;
-2. le code source de la plage concernée, coloré, pris dans la révision relue ;
-3. l'explication, puis un exemple de correction quand le modèle en propose un ;
-4. une ligne secondaire avec la confiance (0 à 1), l'origine de la règle (`PROJECT_CONFIG`, `FRAMEWORK`, `REPO_CONVENTION`, `HEURISTIC`) et la portée (`IN_PR`, `FOLLOW_UP`, `REPO_WIDE`).
-
-L'en-tête sépare le nombre de constats du résultat de la politique : « gate passed » ou « gate failed ». Le dernier bloc, « Usage & cost », liste les jetons d'entrée, d'entrée en cache, de sortie et de raisonnement par rôle, le nombre d'appels, la durée, et une estimation en dollars quand les prix sont configurés (voir [Choisir les modèles](/fr/concepts/choosing-models)).
-
-Options utiles :
-
-```bash
-air-review dry-run --base main --json > run.json   # résultat exploitable par un programme
-air-review dry-run --base main --plain              # journaux ASCII pour la CI
-air-review explain                                  # liste des constats mémorisés
-air-review explain arf_7d0b9f                       # un constat avec ses preuves
-```
-
-## 5. Ce que contient `.air-review/`
-
-Chaque revue locale écrit dans `.air-review/` à la racine du dépôt relu. `air-review init` ajoute ce dossier à `.gitignore` ; ajoutez-le vous-même si vous avez sauté `init`.
-
-| Fichier           | Rôle                                                                                                |
-| ----------------- | --------------------------------------------------------------------------------------------------- |
-| `state.json`      | Le registre local : SHA relus, constats, identifiants et cycle de vie (ouvert, résolu, rouvert)     |
-| `summary.md`      | Le résumé lisible de la dernière exécution, le même tableau que celui qui serait publié dans une PR |
-| `context.md`      | Ce qui a été envoyé au modèle : exemplaires, modules liés, profil du dépôt                          |
-| `telemetry.jsonl` | Une ligne JSON par exécution : jetons, appels, estimation de coût, durée, résultat de la barrière   |
-| `cache/`          | Cache adressé par contenu des réponses du modèle ; peut être supprimé à tout moment                 |
-
-Sur GitHub et Azure DevOps, le registre vit dans la pull request (commentaires ou fils) ; `.air-review/` ne contient alors que le cache, le journal de télémétrie et les résumés locaux.
-
-## Et ensuite
-
-- Mettre l'outil dans un pipeline : [Azure DevOps](/fr/integrations/azure-devops) ou [GitHub Actions](/fr/integrations/github-actions).
-- Comprendre ce que voit le modèle et pourquoi : [Conscience du contexte](/fr/concepts/contextual-awareness).
-- Régler la barrière et les modèles : [Configuration](/fr/reference/configuration), [Choisir les modèles](/fr/concepts/choosing-models).
+Pour le reste : [Azure DevOps](/fr/integrations/azure-devops), [Microsoft Foundry](/fr/integrations/microsoft-foundry), [Dépannage](/fr/troubleshooting).
