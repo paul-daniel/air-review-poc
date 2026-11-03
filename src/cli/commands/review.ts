@@ -1,4 +1,5 @@
 import type { ModelOverrides } from "../../model/router.js";
+import { ciBuildWithoutPullRequest } from "../../scm/detect.js";
 import type { ComplexityTier } from "../../contracts/routing.js";
 import { requireRoleModels, type RoleModels } from "../../model/router.js";
 import type { CiMode } from "../../scm/detect.js";
@@ -28,6 +29,12 @@ export interface ReviewCliOptions {
 }
 
 export async function runReviewCommand(ctx: CliContext, options: ReviewCliOptions): Promise<number> {
+  const notPullRequest = ciBuildWithoutPullRequest({ ci: options.ci, pr: options.pr });
+  if (notPullRequest && ctx.scm.kind === "local") {
+    if (options.json) printJson({ tool: "air-review", skipped: true, reason: notPullRequest });
+    else process.stdout.write(`${notPullRequest}\n`);
+    return EXIT.OK;
+  }
   const publish = options.dryRun ? false : (options.publish ?? ctx.config.platform.publish);
   const models: RoleModels = options.deterministicOnly
     ? { triage: "(none)", planner: "(none)", reviewer: "(none)", verifier: "(none)" }

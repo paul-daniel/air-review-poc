@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { configSchema } from "../src/config/schema.js";
-import { createScmAdapter, azureDevOpsToken } from "../src/scm/detect.js";
+import { createScmAdapter, azureDevOpsToken, ciBuildWithoutPullRequest } from "../src/scm/detect.js";
 import { ScmError } from "../src/errors.js";
 import type { GitRepository } from "../src/context/repository.js";
 
@@ -67,6 +67,20 @@ describe("CI detection", () => {
     expect(scm.kind).toBe("local");
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toMatch(/SYSTEM_PULLREQUEST_PULLREQUESTID/);
+  });
+
+  it("names a CI build without a pull request so commands can exit 0 instead of failing", () => {
+    const { SYSTEM_PULLREQUEST_PULLREQUESTID: _omit, ...noPr } = PIPELINE_PR_ENV;
+    setEnv(noPr);
+    expect(ciBuildWithoutPullRequest({ ci: "auto" })).toMatch(/nothing to review/);
+    expect(ciBuildWithoutPullRequest({ ci: "auto", pr: 7 })).toBeNull();
+    expect(ciBuildWithoutPullRequest({ ci: "local" })).toBeNull();
+    setEnv(PIPELINE_PR_ENV);
+    expect(ciBuildWithoutPullRequest({ ci: "auto" })).toBeNull();
+    setEnv({ GITHUB_ACTIONS: "true", GITHUB_EVENT_NAME: "push" });
+    expect(ciBuildWithoutPullRequest({ ci: "auto" })).toMatch(/nothing to review/);
+    setEnv({});
+    expect(ciBuildWithoutPullRequest({ ci: "auto" })).toBeNull();
   });
 
   it("falls back to local mode when Azure Pipelines builds a non-Azure Repos repository", () => {

@@ -1,4 +1,5 @@
 import type { Finding, ReviewSummary } from "../../contracts/review.js";
+import { ciBuildWithoutPullRequest } from "../../scm/detect.js";
 import type { AirReviewConfig } from "../../config/schema.js";
 import { EXIT, ScmError } from "../../errors.js";
 import { evaluateGate } from "../../review/gate.js";
@@ -103,6 +104,12 @@ export async function runApprove(
   ctx: CliContext,
   options: { json: boolean; dryRun: boolean },
 ): Promise<number> {
+  const notPullRequest = ciBuildWithoutPullRequest({ ci: "auto" });
+  if (notPullRequest && ctx.scm.kind === "local") {
+    if (options.json) printJson({ tool: "air-review", skipped: true, reason: notPullRequest });
+    else process.stdout.write(`${notPullRequest}\n`);
+    return EXIT.OK;
+  }
   if (!ctx.scm.castVote) {
     throw new ScmError(
       `The ${ctx.scm.kind} platform has no reviewer vote; approval only applies to Azure DevOps pull requests.`,

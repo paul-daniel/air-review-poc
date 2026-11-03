@@ -30,4 +30,11 @@ export declare function azureDevOpsToken(config: AirReviewConfig): {
     source: string;
     checked: string[];
 };
+/**
+ * True when the command runs inside a CI job that is not a pull-request build
+ * (for example a pipeline started by hand on `main`). There is nothing to
+ * review there, and no pull request to comment on: callers exit 0 with a
+ * message instead of failing the job.
+ */
+export declare function ciBuildWithoutPullRequest(options: Pick<ScmOptions, "ci" | "pr">): string | null;
 export declare function createScmAdapter(config: AirReviewConfig, gitRepo: GitRepository, options: ScmOptions): ScmAdapter;

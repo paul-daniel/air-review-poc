@@ -101,6 +101,27 @@ function azureTokenKind(source: string, token: string): "basic" | "bearer" {
   return /^eyJ[\w-]+\.[\w-]+\.[\w-]+$/.test(token.trim()) ? "bearer" : "basic";
 }
 
+/**
+ * True when the command runs inside a CI job that is not a pull-request build
+ * (for example a pipeline started by hand on `main`). There is nothing to
+ * review there, and no pull request to comment on: callers exit 0 with a
+ * message instead of failing the job.
+ */
+export function ciBuildWithoutPullRequest(options: Pick<ScmOptions, "ci" | "pr">): string | null {
+  if (options.ci !== "auto" || options.pr) return null;
+  const azure = azurePipelinesEnv();
+  if (azure.isPipeline && !azure.pullRequestId) {
+    return (
+      "Azure Pipelines build without a pull request (SYSTEM_PULLREQUEST_PULLREQUESTID is not set): " +
+      "nothing to review. Run this pipeline from a pull request (build validation policy)."
+    );
+  }
+  if (process.env.GITHUB_ACTIONS === "true" && process.env.GITHUB_EVENT_NAME !== "pull_request") {
+    return `GitHub Actions ${process.env.GITHUB_EVENT_NAME ?? ""} event without a pull request: nothing to review.`.replace("  ", " ");
+  }
+  return null;
+}
+
 export function createScmAdapter(
   config: AirReviewConfig,
   gitRepo: GitRepository,

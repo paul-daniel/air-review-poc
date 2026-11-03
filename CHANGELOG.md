@@ -6,8 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`AIR_REVIEW_PUBLISH=false`**: review and write the run report without posting anything to the pull request,
+  for pipelines whose identity does not have "Contribute to pull requests" yet.
+
 ### Changed
 
+- **CI build without a pull request.** `review` and `approve` now exit 0 with "nothing to review" when the
+  pipeline was started by hand on a branch, instead of failing on a missing base ref. The example pipeline
+  only runs the review steps in pull-request builds.
+- **Publication refused is not a crash.** When the platform refuses every thread (403: missing "Contribute to
+  pull requests"), the review still completes: findings are in the log and the report, the warning names the
+  missing permission, and the memory thread is not written so the next run with permissions starts clean.
 - **Collapsed summary.** The summary comment shows its verdict and headline; everything else (routing,
   findings table, since-last-review, cost, workflow) is in a `<details>` block closed by default.
 - **Code evidence as code.** Evidence that quotes a snippet is rendered in a fenced block.

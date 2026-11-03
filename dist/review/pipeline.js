@@ -403,10 +403,18 @@ export async function runReview(options, deps) {
         }
         if (!stale) {
             const failures = await publishFindings(scm, previous?.findings ?? [], findings);
-            published = true;
-            warnings.push(...failures.map((f) => `Could not publish finding ${f.id}: ${f.message}`));
-            publishStep.end("done", {
-                detail: `${reconciliation.newOrReopened.length} thread(s) created/reopened, ${reconciliation.resolved.length} resolved${failures.length ? `, ${failures.length} failed` : ""}`,
+            const attempted = findings.filter((f) => f.status !== "RESOLVED" && f.status !== "WONT_FIX").length;
+            // When every thread was refused, the platform is refusing us (typically a
+            // 403: the pipeline identity lacks "Contribute to pull requests"). The
+            // review still stands: it is reported in the log and the run report, and
+            // the memory is not advanced so the next run with permissions starts clean.
+            const refused = attempted > 0 && failures.length === attempted;
+            published = !refused;
+            warnings.push(...failures.map((f) => withPermissionHint(`Could not publish finding ${f.id}: ${f.message}`)));
+            publishStep.end(refused ? "failed" : "done", {
+                detail: refused
+                    ? `publication refused by the platform (${failures.length} thread(s)); findings are in the log and the report`
+                    : `${reconciliation.newOrReopened.length} thread(s) created/reopened, ${reconciliation.resolved.length} resolved${failures.length ? `, ${failures.length} failed` : ""}`,
             });
         }
         else {
@@ -431,13 +439,26 @@ export async function runReview(options, deps) {
         metrics,
     });
     if (!incomplete && config.memory.backend !== "none" && (scm.kind === "local" || published)) {
-        await scm.writeState(encodeState(nextState));
+        try {
+            await scm.writeState(encodeState(nextState));
+        }
+        catch (error) {
+            published = false;
+            warnings.push(withPermissionHint(`Could not write the memory thread: ${error.message}`));
+        }
     }
     finalizeMetrics(config, metrics, warnings, incomplete);
     const summary = finishSummary(config, nextState, snapshot, warnings, metrics, trace, [...dismissedEvents, ...reconciliation.events], { incomplete });
     if (scm.kind === "local" || (published && !stale)) {
         const voteStep = trace.begin("verdict", `Verdict: ${summary.verdict}`);
-        await scm.upsertSummary(summary, findings);
+        try {
+            await scm.upsertSummary(summary, findings);
+        }
+        catch (error) {
+            published = false;
+            warnings.push(withPermissionHint(`Could not write the summary comment: ${error.message}`));
+            voteStep.end("failed", { detail: error.message });
+        }
         if (published && !stale && scm.castVote) {
             const deferred = config.platform.azureDevops.vote.mode === "pipeline" && summary.verdict !== "request-changes";
             try {
@@ -491,6 +512,12 @@ export async function runReview(options, deps) {
         report: writeRunReport(config.observability.reportDir, { summary, findings, configuredModels: models }) ??
             undefined,
     };
+}
+/** Names the missing permission when a platform refuses to take our comments. */
+function withPermissionHint(message) {
+    return /\b403\b|forbidden|permission|not authorized|unauthorized/i.test(message)
+        ? `${message} — the pipeline identity needs "Contribute to pull requests" on the repository (Project settings → Repositories → Security → <Project> Build Service).`
+        : message;
 }
 /**
  * Create, update or resolve one thread per finding. The adapter is the one

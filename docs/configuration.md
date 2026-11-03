@@ -32,6 +32,7 @@ rewritten by the TOML serializer, so comments in TOML configs are not kept.
 | `AIR_REVIEW_MODEL_VERIFIER_LIGHT` / `_HEAVY`                       | verifier per complexity tier                                                                                       |
 | `AIR_REVIEW_ROUTING_MODE`                                          | `deterministic`, `hybrid` or `model`                                                                               |
 | `AIR_REVIEW_PRICING`                                               | the whole `telemetry.pricing` table as JSON                                                                        |
+| `AIR_REVIEW_PUBLISH`                                               | `false` reviews and reports without posting to the pull request (`platform.publish`)                                |
 | `GITHUB_TOKEN`                                                     | token for the GitHub adapter                                                                                       |
 | `SYSTEM_ACCESSTOKEN`                                               | token for the Azure DevOps adapter (`$(System.AccessToken)` or a PAT)                                              |
 

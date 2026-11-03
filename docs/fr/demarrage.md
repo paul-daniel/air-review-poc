@@ -106,7 +106,8 @@ l'étape suivante dans le même fil.
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | `doctor` dit qu'il manque l'identifiant                            | `az login`, ou définissez `AIR_REVIEW_API_KEY`                                                               |
 | la sonde de `doctor` échoue en 404                                 | le nom de déploiement dans `air-review.yaml` ne correspond pas au portail                                    |
-| pipeline : HTTP 403 à la publication                               | étape 4 de la partie 3 (Contribute to pull requests)                                                         |
+| pipeline : HTTP 403 à la publication                               | étape 4 de la partie 3 (Contribute to pull requests). En attendant le droit, mettez `AIR_REVIEW_PUBLISH` = `false` dans le groupe de variables : la revue tourne, les remarques sont dans le log de l'étape et dans l'artefact `air-review-reports` |
+| pipeline lancée à la main sur `main` : « nothing to review »       | normal : les étapes de revue ne tournent que dans un build de pull request                                   |
 | pipeline : « No hosted parallelism »                               | demandez la dotation ou utilisez un agent auto-hébergé                                                       |
 | la revue n'a rien trouvé sur un bug volontaire                     | regardez le tier dans la synthèse ; forcez `--tier heavy` une fois pour comparer                             |
 | une remarque ne mérite pas de correction                           | mettez le fil sur **Resolved**, **Won't fix** ou **Closed** : l'outil le respecte et cesse de bloquer        |

@@ -103,7 +103,8 @@ Push a fix: only the changed lines are reviewed, resolved threads get a
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `doctor` says the credential is missing                         | `az login`, or set `AIR_REVIEW_API_KEY`                                                              |
 | `doctor` probe fails with 404                                   | the deployment name in `air-review.yaml` does not match the portal                                   |
-| pipeline: HTTP 403 when publishing                              | step 4 of part 3 (Contribute to pull requests)                                                       |
+| pipeline: HTTP 403 when publishing                              | step 4 of part 3 (Contribute to pull requests). Until you have the right, set `AIR_REVIEW_PUBLISH` = `false` in the variable group: the review runs, the findings are in the step log and in the `air-review-reports` artifact |
+| pipeline run by hand on `main`: "nothing to review"             | expected: the review steps only run in a pull-request build                                           |
 | pipeline: "No hosted parallelism"                               | request the grant or use a self-hosted agent                                                         |
 | the review found nothing on a bug you planted                   | check the tier in the summary; force `--tier heavy` once to compare                                  |
 | a remark is not worth fixing                                    | set the thread to **Resolved**, **Won't fix** or **Closed**: the tool respects it and stops blocking |

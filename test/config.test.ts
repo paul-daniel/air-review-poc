@@ -144,6 +144,21 @@ describe("unexpanded pipeline macros", () => {
   });
 });
 
+describe("AIR_REVIEW_PUBLISH", () => {
+  it("turns publishing off with false/0/no/off and on with anything else", async () => {
+    const { applyEnvOverrides } = await import("../src/config/loader.js");
+    for (const value of ["false", "0", "no", "off", " FALSE "]) {
+      vi.stubEnv("AIR_REVIEW_PUBLISH", value);
+      expect(applyEnvOverrides(defaultConfig()).platform.publish).toBe(false);
+    }
+    vi.stubEnv("AIR_REVIEW_PUBLISH", "true");
+    expect(applyEnvOverrides(defaultConfig()).platform.publish).toBe(true);
+    vi.unstubAllEnvs();
+    delete process.env.AIR_REVIEW_PUBLISH;
+    expect(applyEnvOverrides(defaultConfig()).platform.publish).toBe(false);
+  });
+});
+
 describe("environment provider and pricing", () => {
   it.each(["azure-foundry", "azure-openai", "google", "bedrock", "openai-compatible"])(
     "accepts %s from environment",

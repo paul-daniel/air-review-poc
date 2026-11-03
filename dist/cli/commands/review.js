@@ -1,9 +1,18 @@
+import { ciBuildWithoutPullRequest } from "../../scm/detect.js";
 import { requireRoleModels } from "../../model/router.js";
 import { runReview } from "../../review/pipeline.js";
 import { EXIT } from "../../errors.js";
 import { printJson, Spinner, isPlainMode, reportColorEnabled, writeReport } from "../output.js";
 import { renderReviewReport } from "../report.js";
 export async function runReviewCommand(ctx, options) {
+    const notPullRequest = ciBuildWithoutPullRequest({ ci: options.ci, pr: options.pr });
+    if (notPullRequest && ctx.scm.kind === "local") {
+        if (options.json)
+            printJson({ tool: "air-review", skipped: true, reason: notPullRequest });
+        else
+            process.stdout.write(`${notPullRequest}\n`);
+        return EXIT.OK;
+    }
     const publish = options.dryRun ? false : (options.publish ?? ctx.config.platform.publish);
     const models = options.deterministicOnly
         ? { triage: "(none)", planner: "(none)", reviewer: "(none)", verifier: "(none)" }

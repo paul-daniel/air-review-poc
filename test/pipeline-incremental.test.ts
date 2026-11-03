@@ -227,3 +227,55 @@ describe("incremental review and caching", () => {
     expect(forced.summary.metrics.trace!.steps.find((s) => s.id === "review.model")?.status).toBe("cached");
   });
 });
+
+describe("publication refused by the platform", () => {
+  it("keeps the review, names the missing permission, and does not advance the memory", async () => {
+    const dir = repo();
+    commit(
+      dir,
+      { "widget.ts": "export const a = 1;\n// air-review:expect MAJOR correctness demo.rule: Demo finding\n" },
+      "feature",
+    );
+    const counted = counting(new MockProvider());
+    const config = defaultConfig();
+    config.provider = "mock";
+    config.telemetry.enabled = false;
+    config.observability.reportDir = join(dir, ".air-review", "reports");
+    config.models.tiers.light.reviewer = "mock-small";
+    const gitRepo = await GitRepository.discover(dir);
+    const local = new LocalAdapter({ repo: gitRepo, base: "main", stateDir: ".air-review" });
+    const writes: string[] = [];
+    const forbidden = Object.assign(Object.create(local), {
+      kind: "azure-devops" as const,
+      async createInlineFinding() {
+        throw new Error("Azure DevOps 403 Forbidden: TF401027 You need the Git 'PullRequestContribute' permission");
+      },
+      async writeState(body: string) {
+        writes.push(body);
+      },
+      async upsertSummary() {
+        writes.push("summary");
+      },
+    });
+    const outcome = await runReview(
+      {
+        ci: "azure-devops",
+        publish: true,
+        force: false,
+        deterministicOnly: false,
+        skipLlmVerifier: false,
+        noCache: true,
+        modelOverrides: {},
+      },
+      { config, provider: counted.provider, models, scm: forbidden, git: gitRepo, cache: new LocalCache(join(dir, ".air-review", "cache")) },
+    );
+    expect(outcome.findings).toHaveLength(1);
+    expect(outcome.published).toBe(false);
+    expect(outcome.gateFailed).toBe(true);
+    expect(writes).toEqual([]);
+    expect(outcome.warnings.join("\n")).toMatch(/Contribute to pull requests/);
+    const publish = outcome.summary.metrics.trace!.steps.find((s) => s.id === "publish");
+    expect(publish?.status).toBe("failed");
+    expect(outcome.report).toBeTruthy();
+  });
+});

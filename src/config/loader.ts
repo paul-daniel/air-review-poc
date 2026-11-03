@@ -87,6 +87,11 @@ export function applyEnvOverrides(config: AirReviewConfig): AirReviewConfig {
   if (process.env.AIR_REVIEW_PROVIDER) {
     next.provider = process.env.AIR_REVIEW_PROVIDER;
   }
+  // AIR_REVIEW_PUBLISH=false: review and report, but post nothing to the pull
+  // request (useful while the pipeline identity lacks "Contribute to pull requests").
+  if (process.env.AIR_REVIEW_PUBLISH) {
+    next.platform.publish = !/^(false|0|no|off)$/i.test(process.env.AIR_REVIEW_PUBLISH.trim());
+  }
   if (process.env.AIR_REVIEW_MODEL) {
     next.models.roles.reviewer = process.env.AIR_REVIEW_MODEL;
   }
