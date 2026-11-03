@@ -266,3 +266,42 @@ sur la ressource ; à déployer depuis le catalogue, conditions Marketplace à
 accepter), les prompt agents, et Azure DevOps (jeton PAT nécessaire). C'est
 l'étape suivante que nous avons convenue : brancher la pipeline sur une PR du
 dépôt de test et observer revue, réponses dans les fils, puis approbation.
+
+## 8. Azure DevOps en réel (3 novembre, fin de matinée)
+
+Projet `AirReviewTest-project`, dépôt poussé, pipeline créée depuis
+`azure-pipelines.yml`, agent auto-hébergé `claude-mac`, groupe de variables
+sans aucune clé (la pipeline utilise la session `az login` de l'agent),
+permission « Contribute to pull requests » accordée au compte de build,
+stratégie de validation sur `main`.
+
+**Cycle complet observé sur la PR 8** (modification de la pipeline) : revue au
+premier push → une remarque MINOR, vote « Waiting for author », validation en
+échec ; correction poussée → réponse de l'outil dans le même fil ; décision
+humaine « Resolved » sur le fil → respectée par l'outil ; build et tests →
+étape `approve` → vote **Approved**, check vert, PR complétée sans override.
+
+**Cinq PR de scénario** (une exécution de pipeline chacune) :
+
+| PR  | Scénario                 | Tier / modèle          | Coût     | Résultat                                                                                                     |
+| --- | ------------------------ | ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------ |
+| 3   | 01 traduction            | light / gpt-4.1-mini   | ~0,001 $ | 0 remarque, **Approved (10)**                                                                                |
+| 4   | 02 classification        | light / gpt-4.1-mini   | ~0,007 $ | 4 MINOR de style (dont un compliment posté comme remarque) → **Waiting for author** : faux positifs, voir §9 |
+| 5   | 03 feature multi-modules | heavy / gpt-5-codex    | ~0,08 $  | 1 MAJOR réel (restock avant validation de l'état) → **Waiting for author**                                   |
+| 6   | 05 refactor propre       | standard / gpt-5-codex | ~0,03 $  | 0 remarque, **Approved (10)**                                                                                |
+| 7   | 06 défauts plantés       | standard / gpt-5-codex | ~0,05 $  | BLOCKER secret, CRITICAL remise, 2 MAJOR → **Waiting for author**                                            |
+
+Défauts corrigés grâce à ces runs : installation globale npm cassée sur
+l'agent (dist/ livré dans le dépôt, installation isolée dans la pipeline),
+macro `$(AIR_REVIEW_API_KEY)` non remplacée prise pour une clé (ignorée
+désormais), décisions de reviewer sur les fils (Resolved / Won't fix / Closed)
+désormais respectées, y compris sur un head inchangé.
+
+## 9. Point de calibrage ouvert : MINOR contre NITPICK
+
+Le petit modèle (gpt-4.1-mini, tier light) classe des remarques de style, et
+même des compliments, en MINOR, ce qui bloque la PR 4. Pistes, à décider :
+interdire au reviewer de publier des observations positives ; plafonner à
+NITPICK les remarques d'origine HEURISTIC des catégories maintenabilité,
+cohérence, tests et docs ; faire relire les PR light par un vérifieur un peu
+plus fort. Les scénarios 1, 3, 5 et 6 se comportent exactement comme attendu.
