@@ -19,7 +19,6 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepare": "npm run build",
     "dev": "tsx src/cli/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -35,7 +34,8 @@
     "docs:dev": "vitepress dev website",
     "docs:build": "vitepress build website",
     "docs:preview": "vitepress preview website",
-    "prepublishOnly": "npm run check && npm run build"
+    "prepublishOnly": "npm run check && npm run build",
+    "check:dist": "npm run build && git diff --quiet --exit-code -- dist || (echo 'dist/ is out of date: run npm run build and commit dist/' && exit 1)"
   },
   "keywords": [
     "code-review",

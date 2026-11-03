@@ -1,5 +1,5 @@
 node_modules/
-dist/
+# dist/ is committed on purpose: `npm install -g github:paul-daniel/air-review-poc` ships it (npm runs no build for global git installs).
 .air-review/
 coverage/
 *.log

@@ -50,3 +50,5 @@ jobs:
 
       - name: Publishable file list
         run: npm pack --dry-run
+      - name: dist/ is up to date
+        run: npm run check:dist
