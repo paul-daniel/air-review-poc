@@ -39,10 +39,10 @@ context:
 
 review:
   severities:
-    publish: [BLOCKER, CRITICAL, MAJOR, MINOR]
+    publish: [BLOCKER, CRITICAL, MAJOR, MINOR, NITPICK]
   gate:
-    severities: [BLOCKER, CRITICAL]
-    minimumConfidence: 0.9
+    severities: [BLOCKER, CRITICAL, MAJOR, MINOR]
+    minimumConfidence: 0.6
   maxFindings: 40
 
 memory:
@@ -125,12 +125,12 @@ Packs de contexte à activer. `angular` est livré aujourd'hui (règle de cycle 
 
 ### `review`
 
-| Clé                      | Défaut                              | Signification                                                     |
-| ------------------------ | ----------------------------------- | ----------------------------------------------------------------- |
-| `severities.publish`     | `[BLOCKER, CRITICAL, MAJOR, MINOR]` | quelles sévérités peuvent devenir des commentaires                |
-| `gate.severities`        | `[BLOCKER, CRITICAL]`               | quels constats ouverts font échouer l'exécution avec le code `10` |
-| `gate.minimumConfidence` | `0.9`                               | un constat sous cette confiance ne bloque jamais                  |
-| `maxFindings`            | `40`                                | plafond par exécution                                             |
+| Clé                      | Défaut                                       | Signification                                                                                              |
+| ------------------------ | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `severities.publish`     | `[BLOCKER, CRITICAL, MAJOR, MINOR, NITPICK]` | quelles sévérités peuvent devenir des commentaires (INFO reste dans le rapport)                            |
+| `gate.severities`        | `[BLOCKER, CRITICAL, MAJOR, MINOR]`          | quels constats ouverts font échouer l'exécution avec le code `10` ; `NITPICK` et `INFO` ne bloquent jamais |
+| `gate.minimumConfidence` | `0.6`                                        | un constat sous cette confiance ne bloque jamais                                                           |
+| `maxFindings`            | `40`                                         | plafond par exécution                                                                                      |
 
 ### `memory` et `cache`
 
@@ -176,6 +176,10 @@ platform:
     repository: storefront # nom ou GUID
     tokenEnv: SYSTEM_ACCESSTOKEN # puis AZURE_DEVOPS_ACCESS_TOKEN, AZURE_DEVOPS_EXT_PAT, AZURE_DEVOPS_TOKEN
     apiVersion: "7.1"
+    vote:
+      enabled: true
+      approveWithSuggestions: true # vote 5 quand il ne reste que des nitpicks/info
+      mode: pipeline # pipeline : `air-review approve` vote 10/5 après build et tests ; immediate : l'étape de revue vote
   local:
     base: origin/main # référence de base par défaut des revues locales
 ```

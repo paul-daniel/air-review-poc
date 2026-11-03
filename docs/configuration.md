@@ -161,17 +161,19 @@ context:
 ```yaml
 review:
   severities:
-    publish: [BLOCKER, CRITICAL, MAJOR, MINOR]
+    publish: [BLOCKER, CRITICAL, MAJOR, MINOR, NITPICK] # INFO stays in the report only
   gate:
-    severities: [BLOCKER, CRITICAL]
-    minimumConfidence: 0.9
+    severities: [BLOCKER, CRITICAL, MAJOR, MINOR] # NITPICK and INFO never block
+    minimumConfidence: 0.6
   maxFindings: 40
   maxOutputTokens: 16384 # reviewer output budget; reasoning models spend most of it on hidden reasoning
   modelSkipKinds: [docs, binary] # file kinds that never justify a model call on their own
 ```
 
 `gate` decides which open `IN_PR` findings fail the CI step (exit code 10)
-and turn the verdict into "request changes". `publish` decides which
+and turn the verdict into "request changes": by default everything down to
+`MINOR` must be fixed, while `NITPICK` (reviewer preference) and `INFO` only
+turn "Approved" into "Approved with suggestions". `publish` decides which
 severities may become comments at all. `modelSkipKinds` accepts
 `translation`, `docs`, `data`, `config`, `tests`, `binary`: a push that only
 touches those kinds runs the deterministic rules and carries previous
@@ -218,8 +220,9 @@ platform:
     tokenEnv: SYSTEM_ACCESSTOKEN # then AZURE_DEVOPS_ACCESS_TOKEN, AZURE_DEVOPS_EXT_PAT, AZURE_DEVOPS_TOKEN
     apiVersion: "7.1"
     vote:
-      enabled: true # register as a reviewer and cast the verdict (10 / 5 / -5)
-      approveWithSuggestions: true # vote 5 when only non-blocking findings remain; false = no vote
+      enabled: true # register as a reviewer and vote
+      approveWithSuggestions: true # vote 5 when only nitpicks/info remain; false = no vote
+      mode: pipeline # pipeline: the review step votes only -5 when blocked, `air-review approve` casts 10/5 after build and tests; immediate: the review step casts the final vote
     status:
       enabled: false # also post a pull-request status for a "Status" branch policy
       genre: air-review

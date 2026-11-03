@@ -30,11 +30,12 @@ export function decideApproval(
   pr: { owner: string; repo: string; number: number | null; headSha: string },
 ): ApprovalDecision {
   const state = stateBody ? extractState(stateBody) : null;
-  if (!state)
+  if (!state) {
     return {
       action: "no-review",
       reason: "no air-review state found on this pull request: run the review step first",
     };
+  }
   if (state.pullRequest.headSha !== pr.headSha) {
     return {
       action: "stale",

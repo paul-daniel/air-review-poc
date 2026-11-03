@@ -6,34 +6,34 @@ Secrets are marked **yes**: store them in a CI secret store or a git-ignored `.e
 
 ## Provider
 
-| Variable                          | Secret  | Meaning                                                                                                                                                               |
-| --------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AIR_REVIEW_PROVIDER`             | no      | preset id: `openai`, `azure-openai`, `azure-foundry`, `bedrock`, `google`, `anthropic`, `mistral`, `groq`, `openrouter`, `together`, `fireworks`, `openai-compatible` |
-| `AIR_REVIEW_BASE_URL`             | no      | endpoint root, without the chat path; overrides the preset default                                                                                                    |
-| `AIR_REVIEW_API_KEY`              | **yes** | the key value itself (simplest for CI secret stores)                                                                                                                  |
-| `AIR_REVIEW_API_KEY_ENV`          | no      | the **name** of another variable that holds the key                                                                                                                   |
-| `AIR_REVIEW_ACCESS_TOKEN`         | **yes** | short-lived token (Microsoft Entra ID, OAuth gateways); sent as `Authorization: Bearer`, implies `AIR_REVIEW_AUTH=bearer`                                             |
-| `AIR_REVIEW_AUTH`                 | no      | `api-key` or `bearer`                                                                                                                                                 |
-| `AIR_REVIEW_API`                  | no      | `auto` (default), `chat-completions` or `responses`                                                                                                                   |
-| `AIR_REVIEW_MAX_TOKENS_PARAMETER` | no      | `max_tokens` or `max_completion_tokens` (Azure defaults to the latter)                                                                                                |
+| Variable                          | Secret  | Meaning                                                                                                                                                                                                                                                                            |
+| --------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AIR_REVIEW_PROVIDER`             | no      | preset id: `openai`, `azure-openai`, `azure-foundry`, `bedrock`, `google`, `anthropic`, `mistral`, `groq`, `openrouter`, `together`, `fireworks`, `openai-compatible`                                                                                                              |
+| `AIR_REVIEW_BASE_URL`             | no      | endpoint root, without the chat path; overrides the preset default                                                                                                                                                                                                                 |
+| `AIR_REVIEW_API_KEY`              | **yes** | the key value itself (simplest for CI secret stores)                                                                                                                                                                                                                               |
+| `AIR_REVIEW_API_KEY_ENV`          | no      | the **name** of another variable that holds the key                                                                                                                                                                                                                                |
+| `AIR_REVIEW_ACCESS_TOKEN`         | **yes** | short-lived token (Microsoft Entra ID, OAuth gateways); sent as `Authorization: Bearer`, implies `AIR_REVIEW_AUTH=bearer`. On Foundry presets, with no key and no token set, keyless Entra ID (`DefaultAzureCredential`: `az login`, managed identity, service connection) is used |
+| `AIR_REVIEW_AUTH`                 | no      | `api-key` or `bearer`                                                                                                                                                                                                                                                              |
+| `AIR_REVIEW_API`                  | no      | `auto` (default), `chat-completions` or `responses`                                                                                                                                                                                                                                |
+| `AIR_REVIEW_MAX_TOKENS_PARAMETER` | no      | `max_tokens` or `max_completion_tokens` (Azure defaults to the latter)                                                                                                                                                                                                             |
 
 ### Preset key variables
 
 Each preset reads its own variable when `AIR_REVIEW_API_KEY` and `AIR_REVIEW_API_KEY_ENV` are not set. Set only the one you use.
 
-| Variable                   | Preset                         | Secret  |
-| -------------------------- | ------------------------------ | ------- |
-| `OPENAI_API_KEY`           | `openai`                       | **yes** |
-| `AZURE_OPENAI_API_KEY`     | `azure-openai`                 | **yes** |
-| `AZURE_AI_API_KEY`         | `azure-foundry`                | **yes** |
-| `AWS_BEARER_TOKEN_BEDROCK` | `bedrock` (API key, not SigV4) | **yes** |
-| `GEMINI_API_KEY`           | `google`                       | **yes** |
-| `ANTHROPIC_API_KEY`        | `anthropic`                    | **yes** |
-| `MISTRAL_API_KEY`          | `mistral`                      | **yes** |
-| `GROQ_API_KEY`             | `groq`                         | **yes** |
-| `OPENROUTER_API_KEY`       | `openrouter`                   | **yes** |
-| `TOGETHER_API_KEY`         | `together`                     | **yes** |
-| `FIREWORKS_API_KEY`        | `fireworks`                    | **yes** |
+| Variable                   | Preset                                                 | Secret  |
+| -------------------------- | ------------------------------------------------------ | ------- |
+| `OPENAI_API_KEY`           | `openai`                                               | **yes** |
+| `AZURE_OPENAI_API_KEY`     | `azure-openai`                                         | **yes** |
+| `AZURE_AI_API_KEY`         | `azure-foundry` (optional: keyless Entra ID otherwise) | **yes** |
+| `AWS_BEARER_TOKEN_BEDROCK` | `bedrock` (API key, not SigV4)                         | **yes** |
+| `GEMINI_API_KEY`           | `google`                                               | **yes** |
+| `ANTHROPIC_API_KEY`        | `anthropic`                                            | **yes** |
+| `MISTRAL_API_KEY`          | `mistral`                                              | **yes** |
+| `GROQ_API_KEY`             | `groq`                                                 | **yes** |
+| `OPENROUTER_API_KEY`       | `openrouter`                                           | **yes** |
+| `TOGETHER_API_KEY`         | `together`                                             | **yes** |
+| `FIREWORKS_API_KEY`        | `fireworks`                                            | **yes** |
 
 ## Model roles
 

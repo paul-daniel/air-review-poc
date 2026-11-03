@@ -114,10 +114,14 @@ Choices and why:
   security, performance, maintainability, consistency (differs from how this
   repository does it), tests, docs.
 - **Severity, confidence and scope stay separate.** `BLOCKER`, `CRITICAL`,
-  `MAJOR`, `MINOR`, `INFO` say how bad; confidence (0–1) says how sure;
-  scope (`IN_PR`, `FOLLOW_UP`, `REPO_WIDE`) says where the fix belongs. Only
-  `IN_PR` findings above the configured confidence can fail the gate, so an
-  unsure-but-serious finding is reported honestly without blocking.
+  `MAJOR`, `MINOR`, `NITPICK`, `INFO` say how bad; confidence (0–1) says how
+  sure; scope (`IN_PR`, `FOLLOW_UP`, `REPO_WIDE`) says where the fix belongs.
+  Everything down to `MINOR` must be fixed before approval: an open `IN_PR`
+  finding of those levels at confidence ≥ 0.6 fails the gate. `NITPICK` is a
+  reviewer preference (the code is correct, like CodeRabbit's "Nitpick" type)
+  and `INFO` is existing debt or a follow-up; neither ever blocks, they only
+  turn "Approved" into "Approved with suggestions". An unsure-but-serious
+  finding is reported honestly without blocking.
 - **Consequence, then fix.** The body states what breaks; `**Fix:**` is one
   repository-consistent sentence, optionally followed by code. On GitHub the
   code becomes a committable ```` ```suggestion ```` block **only** when the
@@ -136,9 +140,36 @@ A finding's identity is `rule + file + symbol`, never the line number, so a
 thread survives code moving. On a new push the delta is computed from the
 last reviewed head: findings whose code changed and no longer reproduce get a
 "Resolved" reply and the thread status `fixed` (Azure DevOps) or
-"resolved" (GitHub); a finding that reappears is reopened in its original
-thread; unchanged findings keep their thread untouched; a push that only
-touches docs or an already reviewed head makes no model call at all.
+"resolved" (GitHub); unchanged findings keep their thread untouched; a push
+that only touches docs or an already reviewed head makes no model call at all.
+
+When the author changed the lines around a finding but it still stands (a
+partial fix), the reviewer **continues in the same thread**, as a colleague
+would, with a reply that states what remains:
+
+```markdown
+**After the latest change (`9f1c2d3e`)** — still open:
+
+`libs/shared/src/pricing/discount.ts:17` · 🛑 CRITICAL
+
+The rounding is right now, but `percent` is still used as a fraction.
+
+**Next step:** divide by 100 before multiplying, as `applyPercentDiscount` does.
+
+<sub>confidence 0.91 · air-review-id arf_1f3a9c</sub>
+```
+
+No "you fixed it badly", no rewritten first comment, no second thread. A
+resolved finding that reappears gets the same kind of reply ("Back on
+`<sha>` — this finding reappeared.") and its thread is reactivated.
+
+### Approval is the pipeline's last word
+
+The review step comments and, when something blocks, votes "waiting for
+author". The approving vote is cast by `air-review approve`, which the
+pipeline runs only after the review, the build and the tests have succeeded
+(see [azure-devops.md](azure-devops.md)). Like Copilot's approval, it covers
+exactly the commit the review examined.
 
 ### What we deliberately do not do
 

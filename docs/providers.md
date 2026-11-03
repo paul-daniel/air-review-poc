@@ -5,8 +5,11 @@ switching vendors is a one-line change: pick a **provider preset**, give it a
 key, and the tool fills in that vendor's URL and auth conventions. Everything
 a preset sets can be overridden in the `endpoint` section.
 
-Reviews are plain HTTP calls: no model downloads, no GPU, no local runtime in
-the job.
+Reviews are plain HTTPS calls: no model downloads, no GPU, no local runtime in
+the job. The Microsoft Foundry presets (`azure-foundry`, `azure-openai`,
+`azure-foundry-agent`) go through the official SDKs (`openai`,
+`@anthropic-ai/foundry-sdk`, `@azure/ai-projects`, `@azure/identity`); every
+other preset uses the tool's generic OpenAI-compatible HTTP client.
 
 ## Presets
 
@@ -52,11 +55,13 @@ air-review review --publish
 
 ### Azure OpenAI / Microsoft Foundry
 
-Azure keys travel in the `api-key` header (not `Authorization: Bearer`) and
-the endpoint URL carries your resource name. With Azure OpenAI v1 endpoints
-the deployment name is the model name; Foundry model paths vary by model
-family, so override `endpoint.chatPath` when your deployment documents a
-different one.
+Both presets are served by the official SDKs. The endpoint URL carries your
+resource name and the deployment name is the model name. Any deployment of
+the resource works: GPT, DeepSeek, Llama, Grok, Mistral and the model router
+through the OpenAI door, **Claude** through the Anthropic door (a deployment
+whose name starts with `claude`, or written `claude:<deployment>`). The
+credential is an API key, a provided token, or keyless Entra ID
+(`az login`); see [foundry.md](foundry.md).
 
 ```yaml
 provider: azure-openai
@@ -139,10 +144,13 @@ and a model download would dominate the review time in a pipeline.
 
 ## Microsoft Foundry: the verified inference path
 
-"Microsoft Foundry" (formerly Azure AI Foundry) is the portal; what air-review
-talks to is its **OpenAI v1 API**. Three endpoint shapes are documented by
+"Microsoft Foundry" (formerly Azure AI Foundry) is the portal; air-review
+talks to it through the official SDKs: the `openai` package on the
+**OpenAI v1 route** for every OpenAI-compatible model, and
+`@anthropic-ai/foundry-sdk` on the `/anthropic` route for Claude (details and
+sources in [foundry.md](foundry.md)). Three endpoint shapes are documented by
 Microsoft and all three work here. Paste whichever the portal shows you; the
-tool appends `/openai/v1` itself:
+tool derives `/openai/v1` and `/anthropic` itself:
 
 | What the portal shows          | Example                                                           | Works with                                         |
 | ------------------------------ | ----------------------------------------------------------------- | -------------------------------------------------- |
@@ -159,19 +167,14 @@ export AZURE_AI_API_KEY=...                       # key from the resource "Keys 
 air-review doctor && air-review dry-run --base origin/main
 ```
 
-**Entra ID (keyless) instead of a key.** Microsoft recommends Entra ID. Get a
-token for the scope `https://ai.azure.com/.default` and hand it over as a bearer
-token; the tool switches the header automatically:
-
-```bash
-export AIR_REVIEW_ACCESS_TOKEN="$(az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv)"
-```
-
-In Azure Pipelines, an `AzureCLI@2` task with a service connection can export
-that variable for the review step; the identity needs the
-`Cognitive Services OpenAI User` role on the resource. Tokens expire after
-about an hour, which is fine for a pipeline step. Equivalent config keys:
-`endpoint.auth: bearer` with `endpoint.apiKeyEnv` naming the token variable.
+**Entra ID (keyless) instead of a key.** Microsoft recommends Entra ID, and
+it is the default when no key is set: `DefaultAzureCredential` from
+`@azure/identity` picks up `az login` on a laptop, or a managed identity or
+service connection in CI, and refreshes tokens itself (scope
+`https://ai.azure.com/.default`). The identity needs the "Azure AI User" role
+on the resource. A token fetched by hand still works through
+`AIR_REVIEW_ACCESS_TOKEN` (`endpoint.auth: bearer`); `doctor` prints which
+credential is in use.
 
 **Models.** `model` is always the **deployment name**. Azure OpenAI models and
 the "Foundry Models sold by Azure" (DeepSeek, Grok, MAI, Mistral, Llama…) all
@@ -188,11 +191,11 @@ Verified live on 2026-10-11 against a Foundry resource in Sweden Central:
 through an Entra ID bearer token, and a full review ran in 13 s for about
 $0.02 with the codex reviewer and a mini verifier.
 
-**Parameters.** Azure presets omit `temperature` and send
-`max_completion_tokens`, so reasoning deployments work out of the box. For a
+**Parameters.** Azure presets send `max_completion_tokens` and no
+`temperature`, so reasoning deployments work out of the box. For a
 third-party model that insists on `max_tokens`, set
-`AIR_REVIEW_MAX_TOKENS_PARAMETER=max_tokens`; `endpoint.temperature` sends an
-explicit value.
+`AIR_REVIEW_MAX_TOKENS_PARAMETER=max_tokens`. Claude deployments receive
+`max_tokens` and the system prompt apart, as the Messages API expects.
 
 **No `api-version`.** The v1 route has none. If you see `api-version=2024-…`
 in old samples, that is the previous generation of the API.

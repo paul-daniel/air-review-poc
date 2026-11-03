@@ -4,6 +4,35 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-11-03 — Foundry SDKs, Claude, reviewer behaviour
+
+### Added
+
+- **Official SDKs for Microsoft Foundry.** `provider: azure-foundry` / `azure-openai` now go through the
+  `openai` package for every model behind `/openai/v1` (GPT, DeepSeek, Llama, Grok, Mistral, model router)
+  and `provider: azure-foundry-agent` through `@azure/ai-projects` (`getOpenAIClient` + `agent_reference`).
+  Credentials follow Microsoft's guidance: API key, a provided access token, or keyless Microsoft Entra ID via
+  `DefaultAzureCredential` (`az login`, managed identity, service connection); `doctor` prints which is used.
+- **Claude on Foundry.** Deployments whose name starts with `claude`, or written `claude:<deployment>`, are
+  called through `@anthropic-ai/foundry-sdk` on the resource's `/anthropic` route and can be chosen per role
+  and tier like any other deployment. Not run live yet (no Claude deployment on the test resource).
+- **`NITPICK` severity.** Reviewer preference, never blocks. The gate now blocks on every open `BLOCKER`,
+  `CRITICAL`, `MAJOR`, `MINOR` finding at confidence ≥ 0.6; `NITPICK` and `INFO` only turn "Approved" into
+  "Approved with suggestions".
+- **Follow-ups in the same thread.** A push that touches the code around an open finding without settling it
+  gets a reply in the existing thread with the remaining change (never a second thread or a rewritten first
+  comment); a resolved finding that comes back is reactivated the same way.
+- **`air-review approve`.** Approval is the pipeline's last step: with `platform.azureDevops.vote.mode:
+pipeline` (default) the review step only votes "waiting for author" when blocked, and `approve`, run after
+  build and tests with `condition: succeeded()`, casts 10 or 5 from the review memory in the pull request,
+  refusing a head the review did not examine. `mode: immediate` keeps single-step pipelines.
+- **Getting-started guide** in English and French (`docs/getting-started.md`, `docs/fr/demarrage.md`).
+
+### Changed
+
+- The generic hand-written HTTP client is only used for non-Azure vendors.
+- Example pipeline shows the three-step layout (review, build and tests, approve).
+
 ## [0.2.0] - 2026-11-03 — MVP V1
 
 ### Added

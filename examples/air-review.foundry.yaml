@@ -8,9 +8,10 @@ version: 1
 frameworks: [angular] # context pack; the exemplar planner itself is language-agnostic
 
 # ---------------------------------------------------------------------------
-# Provider: the OpenAI v1 route of a Foundry resource.
+# Provider: a Foundry resource, through the official SDKs.
 #   https://<resource>.services.ai.azure.com  (or https://<resource>.openai.azure.com)
-# The tool appends /openai/v1 itself; no api-version is needed on that route.
+# The tool derives /openai/v1 (GPT, DeepSeek, Llama, Grok, Mistral, model router)
+# and /anthropic (Claude) itself; no api-version is needed.
 # To call Foundry Agent Service prompt agents instead, use
 #   provider: azure-foundry-agent
 #   endpoint.baseUrl: https://<resource>.services.ai.azure.com/api/projects/<project>
@@ -19,10 +20,12 @@ frameworks: [angular] # context pack; the exemplar planner itself is language-ag
 provider: azure-foundry
 endpoint:
   baseUrl: https://my-resource.services.ai.azure.com # or AIR_REVIEW_BASE_URL
-  # Credential, one of:
-  #   - API key:   AZURE_AI_API_KEY (sent in the api-key header), or AIR_REVIEW_API_KEY
-  #   - Entra ID:  AIR_REVIEW_ACCESS_TOKEN, a token for scope https://ai.azure.com/.default,
-  #                sent as Authorization: Bearer (keyless; recommended by Microsoft)
+  # Credential, in this order:
+  #   1. API key:        AZURE_AI_API_KEY or AIR_REVIEW_API_KEY
+  #   2. your own token: AIR_REVIEW_ACCESS_TOKEN (scope https://ai.azure.com/.default)
+  #   3. nothing set:    keyless Microsoft Entra ID through DefaultAzureCredential
+  #                      (az login on a laptop, managed identity / service connection in CI;
+  #                      recommended by Microsoft). `air-review doctor` says which is used.
   apiKeyEnv: AZURE_AI_API_KEY
   api: auto # chat completions first; deployments that only speak the Responses API switch automatically
   timeoutMs: 120000
@@ -30,14 +33,17 @@ endpoint:
 # ---------------------------------------------------------------------------
 # Models per agent role. On Foundry a value is a DEPLOYMENT NAME.
 # Change a deployment here (or through AIR_REVIEW_MODEL_* variables) and the
-# agent uses it on the next run: no code change.
+# agent uses it on the next run: no code change. Claude deployments are
+# recognised by their name (claude-...) or written claude:<deployment>.
 # ---------------------------------------------------------------------------
 models:
   default: gpt-5-mini # fallback for any role left unset
   roles:
     triage: gpt-5-mini # cheap: decides the complexity tier of a pull request
+    # triage: claude-haiku-4-5 # same role on a Claude deployment
     planner: gpt-5-mini # reserved (context planning is deterministic today)
     reviewer: gpt-5 # standard tier: the strong reasoning pass
+    # reviewer: claude-sonnet-4-5 # or a Claude deployment (claude:<deployment> if renamed)
     verifier: gpt-5-mini # cheap: checks every finding against the quoted code
   # Tiers override reviewer/verifier once triage has classified the change.
   # An unset tier model falls back to the standard role model above.
@@ -64,10 +70,10 @@ routing:
 
 review:
   severities:
-    publish: [BLOCKER, CRITICAL, MAJOR, MINOR] # INFO stays in the report only
+    publish: [BLOCKER, CRITICAL, MAJOR, MINOR, NITPICK] # INFO stays in the report only
   gate:
-    severities: [BLOCKER, CRITICAL] # what fails the build (exit code 10)
-    minimumConfidence: 0.9 # ...when the finding is at least this confident
+    severities: [BLOCKER, CRITICAL, MAJOR, MINOR] # what fails the build (exit code 10); NITPICK and INFO never block
+    minimumConfidence: 0.6 # ...when the finding is at least this confident
   maxFindings: 40
   maxOutputTokens: 16384 # reasoning deployments spend most of it on hidden reasoning
   modelSkipKinds: [docs, binary] # a push touching only these costs no model call
@@ -113,7 +119,8 @@ platform:
     apiVersion: "7.1"
     vote:
       enabled: true # add the build service as a reviewer and vote
-      approveWithSuggestions: true # vote 5 (not 0) when only non-blocking findings remain
+      approveWithSuggestions: true # vote 5 (not 0) when only nitpicks/info remain
+      mode: pipeline # the review step votes -5 when blocked; `air-review approve` casts 10/5 after build and tests
     status:
       enabled: false # also post a pull-request status "air-review/gate" (Status branch policy)
       genre: air-review

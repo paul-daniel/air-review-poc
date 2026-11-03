@@ -13,12 +13,12 @@
 
 ## What makes the gate fail
 
-A run exits with `10` when at least one **open** finding has a severity listed in `review.gate.severities` (default `BLOCKER`, `CRITICAL`) **and** a confidence of at least `review.gate.minimumConfidence` (default `0.9`). Everything else is reported but does not block. Deterministic findings (secrets, subscription leaks) carry their own confidence, and a detected secret is a `BLOCKER`.
+A run exits with `10` when at least one **open** finding has a severity listed in `review.gate.severities` (default `BLOCKER`, `CRITICAL`) **and** a confidence of at least `review.gate.minimumConfidence` (default `0.6`). Everything else is reported but does not block. Deterministic findings (secrets, subscription leaks) carry their own confidence, and a detected secret is a `BLOCKER`.
 
 To change the policy:
 
 ```bash
-air-review config set review.gate.minimumConfidence 0.95
+air-review config set review.gate.minimumConfidence 0.65
 air-review config set review.gate.severities '["BLOCKER"]'
 ```
 

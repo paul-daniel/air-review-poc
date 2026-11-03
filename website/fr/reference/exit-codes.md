@@ -13,12 +13,12 @@
 
 ## Ce qui fait échouer la barrière
 
-Une exécution sort avec `10` quand au moins un constat **ouvert** a une sévérité listée dans `review.gate.severities` (défaut `BLOCKER`, `CRITICAL`) **et** une confiance au moins égale à `review.gate.minimumConfidence` (défaut `0.9`). Tout le reste est rapporté mais ne bloque pas. Les constats déterministes (secrets, fuites d'abonnements) portent leur propre confiance, et un secret détecté est un `BLOCKER`.
+Une exécution sort avec `10` quand au moins un constat **ouvert** a une sévérité listée dans `review.gate.severities` (défaut `BLOCKER`, `CRITICAL`) **et** une confiance au moins égale à `review.gate.minimumConfidence` (défaut `0.6`). Tout le reste est rapporté mais ne bloque pas. Les constats déterministes (secrets, fuites d'abonnements) portent leur propre confiance, et un secret détecté est un `BLOCKER`.
 
 Pour changer la politique :
 
 ```bash
-air-review config set review.gate.minimumConfidence 0.95
+air-review config set review.gate.minimumConfidence 0.65
 air-review config set review.gate.severities '["BLOCKER"]'
 ```
 

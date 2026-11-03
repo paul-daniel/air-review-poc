@@ -39,10 +39,10 @@ context:
 
 review:
   severities:
-    publish: [BLOCKER, CRITICAL, MAJOR, MINOR]
+    publish: [BLOCKER, CRITICAL, MAJOR, MINOR, NITPICK]
   gate:
-    severities: [BLOCKER, CRITICAL]
-    minimumConfidence: 0.9
+    severities: [BLOCKER, CRITICAL, MAJOR, MINOR]
+    minimumConfidence: 0.6
   maxFindings: 40
 
 memory:
@@ -125,12 +125,12 @@ Context packs to enable. `angular` ships today (subscription lifecycle rule, con
 
 ### `review`
 
-| Key                      | Default                             | Meaning                                              |
-| ------------------------ | ----------------------------------- | ---------------------------------------------------- |
-| `severities.publish`     | `[BLOCKER, CRITICAL, MAJOR, MINOR]` | which severities may become comments at all          |
-| `gate.severities`        | `[BLOCKER, CRITICAL]`               | which open findings fail the run with exit code `10` |
-| `gate.minimumConfidence` | `0.9`                               | a finding below this confidence never blocks         |
-| `maxFindings`            | `40`                                | cap per run                                          |
+| Key                      | Default                                      | Meaning                                                                                |
+| ------------------------ | -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `severities.publish`     | `[BLOCKER, CRITICAL, MAJOR, MINOR, NITPICK]` | which severities may become comments at all (INFO stays in the report)                 |
+| `gate.severities`        | `[BLOCKER, CRITICAL, MAJOR, MINOR]`          | which open findings fail the run with exit code `10`; `NITPICK` and `INFO` never block |
+| `gate.minimumConfidence` | `0.6`                                        | a finding below this confidence never blocks                                           |
+| `maxFindings`            | `40`                                         | cap per run                                                                            |
 
 ### `memory` and `cache`
 
@@ -176,6 +176,10 @@ platform:
     repository: storefront # name or GUID
     tokenEnv: SYSTEM_ACCESSTOKEN # then AZURE_DEVOPS_ACCESS_TOKEN, AZURE_DEVOPS_EXT_PAT, AZURE_DEVOPS_TOKEN
     apiVersion: "7.1"
+    vote:
+      enabled: true
+      approveWithSuggestions: true # vote 5 when only nitpicks/info remain
+      mode: pipeline # pipeline: `air-review approve` casts 10/5 after build and tests; immediate: the review step votes
   local:
     base: origin/main # default base ref for local reviews
 ```

@@ -238,3 +238,31 @@ déploiement à raisonnement (gpt-5-codex) en échec (budget de 16 tokens
    et mesurer sa valeur (confiance, coût).
 5. Petit benchmark de précision (scénario 06 + quelques PR réelles) avant toute
    extension à d'autres frameworks.
+
+---
+
+## 7. Mise à jour du 3 novembre (matin) — après discussion
+
+Décisions prises ensemble et appliquées :
+
+| Décision                                                        | Fait                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SDK officiels pour Foundry** plutôt que le client HTTP maison | Oui. `openai` pour tous les modèles derrière la route `/openai/v1` (GPT, DeepSeek, Llama, Grok, Mistral, model router), SDK Anthropic Foundry pour Claude, `@azure/ai-projects` pour les prompt agents. Identifiants : clé API, jeton fourni, ou **sans clé** via `DefaultAzureCredential` (connexion `az login` en local, identité managée ou connexion de service en pipeline). `doctor` affiche lequel est utilisé. Le client HTTP maison ne sert plus qu'aux fournisseurs hors Azure. |
+| **Claude disponible comme n'importe quel modèle**               | Oui. Un déploiement dont le nom commence par `claude` (ou écrit `claude:<déploiement>`) passe par la porte Anthropic de Foundry (`…/anthropic`, API Messages, source Microsoft citée dans `docs/foundry.md`). Il se choisit par rôle ou par tier dans la config, sans code. La version (Haiku, Sonnet, Opus 4.5…) est celle que vous déployez.                                                                                                                                            |
+| **Échelle de sévérité et blocage**                              | BLOCKER / CRITICAL / MAJOR / MINOR / **NITPICK** / INFO. Tout ce qui est MINOR ou plus grave (confiance ≥ 0,6) bloque l'approbation ; NITPICK (préférence du reviewer) et INFO ne bloquent jamais. Prompts du reviewer et du vérifieur alignés.                                                                                                                                                                                                                                           |
+| **Répondre dans le fil existant**                               | Oui. Quand un push touche le code d'une remarque ouverte sans la régler (ou qu'une remarque résolue revient), l'outil répond dans le même fil avec l'étape suivante, sans « tu as mal corrigé », et réactive le fil. Jamais de second fil.                                                                                                                                                                                                                                                |
+| **Approbation = dernière étape de la pipeline**                 | Oui. Nouvelle commande `air-review approve`. Mode par défaut `vote.mode: pipeline` : l'étape de revue ne vote que « en attente de l'auteur » (code de sortie 10) ; `approve` tourne après build et tests (`condition: succeeded()`), relit la mémoire de la PR, refuse un head non revu, et vote 10 (ou 5 s'il ne reste que des nitpicks). L'outil ne complète jamais la PR.                                                                                                              |
+| **Guide de démarrage simple**                                   | `docs/getting-started.md` et `docs/fr/demarrage.md` : quatre parties, 30 minutes, une vérification à chaque étape, tableau des pannes classiques.                                                                                                                                                                                                                                                                                                                                         |
+
+Vérifications : 248 tests unitaires et le test de bout en bout hors ligne sont
+verts ; en réel sur `airreview-resource`, `doctor` puis `dry-run` ont tourné
+**sans aucune clé** (identité de votre session `az login` via
+DefaultAzureCredential, SDK OpenAI) : tier light, 2 appels, 9,3 s, ~0,003 $,
+bug de remise trouvé par gpt-4.1-mini. Les six scénarios du dépôt de test ont
+été rejoués hors ligne avec la nouvelle règle de blocage.
+
+Toujours non vérifié en réel : Claude sur Foundry (aucun déploiement Claude
+sur la ressource ; à déployer depuis le catalogue, conditions Marketplace à
+accepter), les prompt agents, et Azure DevOps (jeton PAT nécessaire). C'est
+l'étape suivante que nous avons convenue : brancher la pipeline sur une PR du
+dépôt de test et observer revue, réponses dans les fils, puis approbation.

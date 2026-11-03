@@ -5,20 +5,54 @@
 talks to it in two ways. Both are chosen by configuration only; the engine
 never references a vendor, a model or an agent by name in code.
 
-| Path                                    | `provider`            | What `models.*` names are | When to use                                                                                                     |
-| --------------------------------------- | --------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| A. Foundry Models, OpenAI v1 API        | `azure-foundry`       | **deployment names**      | the default: one HTTPS call per role, works with every model sold through Foundry                               |
-| B. Foundry Agent Service, prompt agents | `azure-foundry-agent` | **agent names**           | when the review roles must exist as governed agents in a Foundry project (tracing, versions, portal playground) |
+| Path                                         | `provider`            | What `models.*` names are | When to use                                                                                                     |
+| -------------------------------------------- | --------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| A. Foundry Models (OpenAI door, Claude door) | `azure-foundry`       | **deployment names**      | the default: one call per role through the official SDKs, works with every model deployed in Foundry            |
+| B. Foundry Agent Service, prompt agents      | `azure-foundry-agent` | **agent names**           | when the review roles must exist as governed agents in a Foundry project (tracing, versions, portal playground) |
 
-## A. A deployed model behind the OpenAI v1 route
+Both paths are implemented with Microsoft's and the vendors' official SDKs
+(`openai`, `@anthropic-ai/foundry-sdk`, `@azure/ai-projects`, `@azure/identity`),
+so API changes arrive as package updates with a changelog, retries and token
+refresh are the libraries' job, and the tool never hand-builds a Foundry
+request. The generic hand-written HTTP client is only used for non-Azure
+vendors.
 
-Foundry exposes every deployment of a resource behind one endpoint and one
-credential; the deployment name travels in the `model` field of the request
-and the `/openai/v1/` route uses implicit versioning, so no `api-version`
-is needed ([Endpoints for Microsoft Foundry Models](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/endpoints)).
-The same page states that the base URL accepts both
-`https://<resource>.openai.azure.com/openai/v1/` and
-`https://<resource>.services.ai.azure.com/openai/v1/`.
+## A. A deployed model: the OpenAI door and the Claude door
+
+One Foundry resource exposes its deployments behind two documented doors,
+and `provider: azure-foundry` (`src/model/foundry.ts`) opens the right one
+per deployment name:
+
+- **OpenAI door** — every model sold through the OpenAI-compatible route
+  (GPT, DeepSeek, Llama, Grok, Mistral, Kimi, the model router…), called with
+  the `openai` package against `https://<resource>/openai/v1`. The deployment
+  name travels in the `model` field and the `/openai/v1/` route uses implicit
+  versioning, so no `api-version` is needed
+  ([Endpoints for Microsoft Foundry Models](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/endpoints)).
+  The same page states that the base URL accepts both
+  `https://<resource>.openai.azure.com/openai/v1/` and
+  `https://<resource>.services.ai.azure.com/openai/v1/`.
+- **Claude door** — Claude deployments are served through Anthropic's
+  Messages API at `https://<resource>.services.ai.azure.com/anthropic`
+  (target URI `…/anthropic/v1/messages`), called with the official
+  `@anthropic-ai/foundry-sdk` package; the deployment name is the `model`
+  and the same Entra ID scope or API key applies
+  ([Deploy and use Claude models in Microsoft Foundry](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/how-to/use-foundry-models-claude)).
+  A deployment goes through this door when its name starts with `claude`
+  (the portal's default deployment name is the model name) or when the
+  config writes it as `claude:<deployment>`. Claude has no JSON mode, so the
+  JSON contract lives in the prompt and the parser tolerates prose around
+  the document.
+
+Claude deployments are chosen per role and tier like any other deployment:
+
+```yaml
+models:
+  roles: { triage: claude-haiku-4-5, reviewer: gpt-5, verifier: claude-haiku-4-5 }
+  tiers:
+    light: { reviewer: claude-haiku-4-5 }
+    heavy: { reviewer: claude-sonnet-4-5 } # or claude:my-sonnet-deployment
+```
 
 Paste whichever endpoint the portal shows; air-review appends `/openai/v1`:
 
@@ -28,20 +62,27 @@ Paste whichever endpoint the portal shows; air-review appends `/openai/v1`:
 | Foundry resource endpoint      | `https://<resource>.services.ai.azure.com`                        |
 | Foundry project endpoint       | `https://<resource>.services.ai.azure.com/api/projects/<project>` |
 
-Authentication, per the same Microsoft page:
+Authentication (`src/model/azure-credential.ts`), in this order, per the
+Microsoft pages above:
 
-- **API key**: quick to set up but it grants full access to the resource and
-  must be rotated by hand; Microsoft recommends keyless authentication for
-  production. The tool sends it in the `api-key` header (`AZURE_AI_API_KEY`
-  or `AIR_REVIEW_API_KEY`).
-- **Microsoft Entra ID (keyless)**: tokens must be issued for the scope
-  `https://ai.azure.com/.default` and travel as `Authorization: Bearer`.
-  `AIR_REVIEW_ACCESS_TOKEN` does exactly that:
+1. **API key** (`AIR_REVIEW_API_KEY`, `AZURE_AI_API_KEY`, or `endpoint.apiKey`):
+   quick to set up but it grants full access to the resource and must be
+   rotated by hand; Microsoft recommends keyless authentication for production.
+2. **A provided access token** (`AIR_REVIEW_ACCESS_TOKEN`, scope
+   `https://ai.azure.com/.default`, sent as `Authorization: Bearer`) for jobs
+   that fetch one themselves.
+3. **Keyless Microsoft Entra ID**, when neither is set: `DefaultAzureCredential`
+   from `@azure/identity` finds the identity of the environment (`az login` on
+   a laptop, a managed identity or the pipeline's service connection in CI)
+   and refreshes tokens on its own. This is the recommended path; nothing to
+   configure.
 
 ```bash
-az login
-export AIR_REVIEW_ACCESS_TOKEN="$(az account get-access-token --scope https://ai.azure.com/.default --query accessToken -o tsv)"
+az login            # that is all: no key, no token variable
+air-review doctor   # prints "Microsoft Entra ID via DefaultAzureCredential …"
 ```
+
+`air-review doctor` always says which of the three is in use.
 
 Wire protocol: the Responses API works with Azure OpenAI models and with the
 Foundry Models sold by Azure that support it; a deployment that does not
@@ -83,8 +124,12 @@ Facts from the quickstart (Foundry projects "new" API, Azure AI Projects 2.x):
 - Prerequisite from the quickstart: Application Insights connected to the project for agent tracing.
 
 air-review's `FoundryAgentProvider` (`src/model/foundry-agent.ts`) uses the
-REST invoke route above with a bearer token and parses the Responses usage
-block, so cost reporting works the same as with path A.
+official `@azure/ai-projects` SDK exactly as the quickstart does:
+`new AIProjectClient(projectEndpoint, credential)`, then
+`project.getOpenAIClient()` and `responses.create(..., { body: { agent_reference: { name, type: "agent_reference" } } })`.
+The Responses usage block is parsed, so cost reporting works the same as with
+path A. Agents need an Entra ID identity (credential order above, API keys
+excluded).
 
 Create or update the five agents from the tool's own prompts:
 
@@ -120,8 +165,8 @@ models:
 | ------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `provider`                      | `AIR_REVIEW_PROVIDER`                               | `azure-foundry`, `azure-foundry-agent`, `azure-openai`, `openai`, … , `mock` |
 | `endpoint.baseUrl`              | `AIR_REVIEW_BASE_URL`                               | resource, project or agent-project endpoint                                  |
-| `endpoint.apiKey` / `apiKeyEnv` | `AIR_REVIEW_API_KEY`, `AZURE_AI_API_KEY`            | API key                                                                      |
-| `endpoint.auth: bearer` + token | `AIR_REVIEW_ACCESS_TOKEN`                           | Entra ID token, sent as `Authorization: Bearer`                              |
+| `endpoint.apiKey` / `apiKeyEnv` | `AIR_REVIEW_API_KEY`, `AZURE_AI_API_KEY`            | API key (optional: keyless Entra ID is used when nothing is set)             |
+| `endpoint.auth: bearer` + token | `AIR_REVIEW_ACCESS_TOKEN`                           | a token you fetched yourself, sent as `Authorization: Bearer`                |
 | `models.roles.triage`           | `AIR_REVIEW_MODEL_TRIAGE`                           | complexity triage (cheap)                                                    |
 | `models.roles.planner`          | `AIR_REVIEW_MODEL_PLANNER`                          | reserved; context planning is deterministic today                            |
 | `models.roles.reviewer`         | `AIR_REVIEW_MODEL_REVIEWER` (or `AIR_REVIEW_MODEL`) | standard-tier reviewer                                                       |
@@ -152,12 +197,12 @@ endpoint:
 models:
   default: gpt-5-mini
   roles:
-    triage: gpt-5-mini # decides the tier
-    reviewer: gpt-5 # standard tier
+    triage: gpt-5-mini # decides the tier (or claude-haiku-4-5)
+    reviewer: gpt-5 # standard tier (or claude-sonnet-4-5)
     verifier: gpt-5-mini # checks findings against the code
   tiers:
     light: { reviewer: gpt-5-mini } # translation file, small helper, tests only
-    heavy: { reviewer: gpt-5-codex } # large or cross-module pull requests
+    heavy: { reviewer: gpt-5-codex } # large or cross-module pull requests (or claude-sonnet-4-5)
 routing:
   mode: hybrid # thresholds, then the triage model for the middle band
   light: { maxFiles: 3, maxLines: 150 }
@@ -173,7 +218,7 @@ platform:
   provider: azure-devops
   publish: true
   azureDevops:
-    vote: { enabled: true, approveWithSuggestions: true }
+    vote: { enabled: true, approveWithSuggestions: true, mode: pipeline } # approval cast by `air-review approve`
     status: { enabled: false, genre: air-review, name: gate }
 ```
 
@@ -189,8 +234,8 @@ Foundry price list for your region and deployment type.
    one (standard/heavy tier). Raise the tokens-per-minute quota of the strong
    deployment if several pull requests will be reviewed in parallel.
 3. Grant the identity that will review (your user for manual runs, a service
-   principal or the pipeline's connection) the role Microsoft documents for
-   keyless inference on the resource, or copy an API key.
+   principal or the pipeline's connection) the "Azure AI User" role on the
+   resource for keyless inference, or copy an API key.
 4. In Azure DevOps, create the variable group `air-review` with
    `AIR_REVIEW_PROVIDER`, `AIR_REVIEW_BASE_URL`, the model variables and the
    secret credential (see [azure-devops.md](azure-devops.md)).
@@ -229,6 +274,12 @@ model, so `telemetry.pricing` must contain the underlying deployment names,
 not only `model-router`.
 
 ## Verified live, and what was not
+
+On 3 November the SDK path (`openai` + `@azure/identity`, Anthropic Foundry
+SDK, `@azure/ai-projects`) replaced the raw HTTP path for every Foundry
+provider; the OpenAI door was re-validated through the SDK, the Claude door
+was not run live (no Claude deployment on the resource yet) and is covered
+by tests with a fake SDK client only.
 
 Path A was exercised on 3 November 2026 against the resource
 `airreview-resource` (Sweden Central) with an Entra ID token from a signed-in

@@ -7,6 +7,9 @@ reviewed, and votes on the pull request. Models run on **Microsoft Foundry**
 (or any OpenAI-compatible endpoint); the first integration target is
 **Azure DevOps**.
 
+> **New here?** Follow the 30-minute guide: [docs/getting-started.md](docs/getting-started.md)
+> (français : [docs/fr/demarrage.md](docs/fr/demarrage.md)).
+
 ```text
 diff → structural analysis → triage (which agent?) → reviewer (light | standard | heavy)
      → verifier → ledger (what changed since last time?) → PR comments + vote + cost report
@@ -83,21 +86,29 @@ the cost of each step and the workflow actually executed.
 
 ## Models on Microsoft Foundry
 
-Two verified paths, both configured without touching code:
+Two paths, both built on Microsoft's official SDKs and configured without
+touching code. Any model deployed in Foundry works: GPT, DeepSeek, Llama,
+Grok, Mistral and the model router through the OpenAI door (`openai`
+package), **Claude** through the Anthropic door (`@anthropic-ai/foundry-sdk`),
+prompt agents through `@azure/ai-projects`.
 
-| `provider`            | What a role model is                    | Endpoint                                                            |
-| --------------------- | --------------------------------------- | ------------------------------------------------------------------- |
-| `azure-foundry`       | a **deployment name** (OpenAI v1 API)   | `https://<resource>.services.ai.azure.com` (or `.openai.azure.com`) |
-| `azure-foundry-agent` | a **prompt agent name** (Agent Service) | `https://<resource>.services.ai.azure.com/api/projects/<project>`   |
+| `provider`            | What a role model is                                    | Endpoint                                                            |
+| --------------------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
+| `azure-foundry`       | a **deployment name** (Claude ones start with `claude`) | `https://<resource>.services.ai.azure.com` (or `.openai.azure.com`) |
+| `azure-foundry-agent` | a **prompt agent name** (Agent Service)                 | `https://<resource>.services.ai.azure.com/api/projects/<project>`   |
 
 ```yaml
 provider: azure-foundry
 models:
   roles: { triage: gpt-5-mini, reviewer: gpt-5, verifier: gpt-5-mini }
   tiers:
-    light: { reviewer: gpt-5-mini } # one translation file, a small helper
-    heavy: { reviewer: gpt-5-codex } # large, cross-module pull requests
+    light: { reviewer: claude-haiku-4-5 } # one translation file, a small helper
+    heavy: { reviewer: claude-sonnet-4-5 } # large, cross-module pull requests
 ```
+
+Credential: an API key, a provided token, or nothing at all (keyless
+Microsoft Entra ID: `az login` on a laptop, the service connection in a
+pipeline). `air-review doctor` says which one is in use.
 
 Environment variables (`AIR_REVIEW_MODEL_REVIEWER`, `AIR_REVIEW_MODEL_REVIEWER_LIGHT`,
 `AIR_REVIEW_MODEL_REVIEWER_HEAVY`, `AIR_REVIEW_ACCESS_TOKEN`, …) override the file, so a
@@ -109,9 +120,13 @@ procedure: [docs/foundry.md](docs/foundry.md).
 In a pull-request validation build the adapter is auto-detected. It keeps its
 memory in the pull request itself (one state thread, one summary thread, one
 thread per finding, never duplicated), reviews only what changed since the
-last push, adds itself as a reviewer and votes **Approved** (10), **Approved
-with suggestions** (5) or **Waiting for author** (-5), and exits `10` so a
-build validation policy blocks the merge while blocking findings remain.
+last push, continues an existing thread when a fix is only partial, and exits
+`10` so a build validation policy blocks the merge while blocking findings
+remain. The review step votes **Waiting for author** (-5) when something
+blocks; the approving vote (**Approved** 10, **Approved with suggestions** 5)
+is cast by a separate `air-review approve` step that the pipeline runs once
+the review, the build and the tests have all succeeded. The tool never
+completes the pull request.
 
 Ready-to-use pipeline and permissions: [docs/azure-devops.md](docs/azure-devops.md)
 and [examples/azure-pipelines.yml](examples/azure-pipelines.yml).
@@ -127,19 +142,20 @@ tokens per deployment). Guide: [docs/observability.md](docs/observability.md).
 
 ## Commands
 
-| Command                                                         | What it does                                                 |
-| --------------------------------------------------------------- | ------------------------------------------------------------ |
-| `air-review init`                                               | write a provider-ready, commented config                     |
-| `air-review doctor`                                             | check config, credential, endpoint, deployments, git and SCM |
-| `air-review example`                                            | copy-paste snippets (providers, CI, config, local)           |
-| `air-review inspect`                                            | what the tool sees: delta, structural facts, context plan    |
-| `air-review dry-run`                                            | full review, nothing published                               |
-| `air-review review [--publish] [--tier light\|standard\|heavy]` | review, publish, vote                                        |
-| `air-review explain [id]`                                       | stored findings, or one finding with its evidence            |
-| `air-review models`                                             | what the endpoint offers and which role uses it              |
-| `air-review telemetry`                                          | recent runs: tier, tokens, cost, duration, verdict           |
-| `air-review cache stats` / `prune`                              | inspect or clean the local result cache                      |
-| `air-review config get` / `set` / `unset` / `list`              | read or edit the config                                      |
+| Command                                                         | What it does                                                              |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `air-review init`                                               | write a provider-ready, commented config                                  |
+| `air-review doctor`                                             | check config, credential, endpoint, deployments, git and SCM              |
+| `air-review example`                                            | copy-paste snippets (providers, CI, config, local)                        |
+| `air-review inspect`                                            | what the tool sees: delta, structural facts, context plan                 |
+| `air-review dry-run`                                            | full review, nothing published                                            |
+| `air-review review [--publish] [--tier light\|standard\|heavy]` | review, publish, request changes when blocked                             |
+| `air-review approve`                                            | cast the approving vote from the review in the PR (after build and tests) |
+| `air-review explain [id]`                                       | stored findings, or one finding with its evidence                         |
+| `air-review models`                                             | what the endpoint offers and which role uses it                           |
+| `air-review telemetry`                                          | recent runs: tier, tokens, cost, duration, verdict                        |
+| `air-review cache stats` / `prune`                              | inspect or clean the local result cache                                   |
+| `air-review config get` / `set` / `unset` / `list`              | read or edit the config                                                   |
 
 Exit codes: `0` gate passed · `10` gate failed · `20` config · `30` model/provider · `40` SCM · `50` internal.
 Reference: [docs/commands.md](docs/commands.md).

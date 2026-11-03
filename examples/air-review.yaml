@@ -31,10 +31,11 @@ context:
 
 review:
   severities:
-    publish: [BLOCKER, CRITICAL, MAJOR, MINOR]
+    publish: [BLOCKER, CRITICAL, MAJOR, MINOR, NITPICK]
   gate:
-    severities: [BLOCKER, CRITICAL]
-    minimumConfidence: 0.9
+    # Everything down to MINOR blocks approval; NITPICK and INFO never do.
+    severities: [BLOCKER, CRITICAL, MAJOR, MINOR]
+    minimumConfidence: 0.6
   maxFindings: 40
 
 memory:

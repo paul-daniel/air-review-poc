@@ -103,6 +103,27 @@ decision, the cost per step and the workflow diagram, and prints the path.
 Exit codes: `0` gate passed, `10` gate failed, `20` config, `30` provider,
 `40` SCM, `50` internal.
 
+## approve
+
+The pipeline's last word on an Azure DevOps pull request. Reads the review
+memory already in the pull request (no model call) and casts the approving
+vote: `10` when nothing is open, `5` when only nitpicks, info or
+low-confidence findings remain. Refuses, with exit code `10`, while blocking
+findings are open, and with exit code `40` when the pull request moved past
+the reviewed commit or has no review yet. Never completes the pull request.
+Run it after your build and tests with `condition: succeeded()`
+([examples/azure-pipelines.yml](../examples/azure-pipelines.yml)); the review
+step itself only votes "waiting for author" when
+`platform.azureDevops.vote.mode` is `pipeline` (default).
+
+```bash
+air-review approve                              # in the pipeline
+air-review approve --dry-run                    # say what would be voted
+air-review approve --ci azure-devops --org https://dev.azure.com/acme --project Shop --repo storefront --pr 483 --json
+```
+
+Same SCM switches as `review`: `--ci`, `--org/--project/--repo/--pr`.
+
 ## explain
 
 Without an id: the stored findings for this PR. With an id: full evidence,

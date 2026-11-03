@@ -90,7 +90,7 @@ how bad, how sure, and where the fix belongs:
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ruleOrigin | `PROJECT_CONFIG` (very strong, checked deterministically when possible), `FRAMEWORK` (strong), `REPO_CONVENTION` (needs several precedents), `HEURISTIC` (weak, rarely blocking) |
 | category   | `correctness`, `security`, `performance`, `maintainability`, `consistency`, `tests`, `docs`                                                                                      |
-| severity   | `BLOCKER`, `CRITICAL`, `MAJOR`, `MINOR`, `INFO`                                                                                                                                  |
+| severity   | `BLOCKER`, `CRITICAL`, `MAJOR`, `MINOR` (all must be fixed before approval), `NITPICK` (reviewer preference, never blocks), `INFO` (existing debt / follow-up, never blocks)     |
 | confidence | `0..1`, independent of severity                                                                                                                                                  |
 | scope      | `IN_PR` (fix here; the only scope that can fail the gate), `FOLLOW_UP` (separate task, including findings on unchanged code the change interacts with), `REPO_WIDE` (systemic)   |
 
@@ -102,12 +102,16 @@ explained in [review-format.md](review-format.md).
 ## Verdict and gate
 
 `evaluateGate` fails on open `IN_PR` findings whose severity is in
-`review.gate.severities` and whose confidence is at least
-`review.gate.minimumConfidence`. `decideVerdict` then maps the run to what a
-reviewer would cast: `approve` (nothing open), `approve-with-suggestions`
-(open but nothing blocking), `request-changes` (gate failed), `comment` (the
-run could not complete; never a vote on partial data). Exit code `10` means
-the gate failed; the Azure DevOps adapter turns the verdict into a vote.
+`review.gate.severities` (default `BLOCKER`, `CRITICAL`, `MAJOR`, `MINOR`)
+and whose confidence is at least `review.gate.minimumConfidence` (default
+`0.6`); `NITPICK` and `INFO` never block. `decideVerdict` then maps the run
+to what a reviewer would cast: `approve` (nothing open),
+`approve-with-suggestions` (only nitpicks, info or low-confidence findings
+open), `request-changes` (gate failed), `comment` (the run could not
+complete; never a vote on partial data). Exit code `10` means the gate
+failed. On Azure DevOps the review step casts only the negative vote; the
+approving vote is the separate `air-review approve` step, run by the pipeline
+after build and tests (`platform.azureDevops.vote.mode`).
 
 ## Source layout
 
@@ -147,8 +151,11 @@ adds severity, scope and the effective config hash.
 On a new push the delta is computed from the last reviewed head and the
 ledger is reconciled: unchanged findings keep their state, findings whose
 code changed and no longer reproduce are resolved, a resolved finding that
-reappears is reopened in its original thread, and model findings that
-rename their rule between runs are matched by file and line proximity.
+reappears is reopened in its original thread, a finding whose surrounding
+code changed but still stands is flagged `changedSinceLastReview` so the
+adapter continues its thread with the remaining change (never a second
+thread), and model findings that rename their rule between runs are matched
+by file and line proximity.
 
 ## Memory model
 

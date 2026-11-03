@@ -7,8 +7,10 @@ outside Azure DevOps.
 
 ## Pipeline
 
-Ready to use: [examples/azure-pipelines.yml](../examples/azure-pipelines.yml).
-The essential steps:
+The pipeline has three parts: the review step (early, every push), your own
+build and test steps, and `air-review approve` last with `condition:
+succeeded()`. The complete file is
+[examples/azure-pipelines.yml](../examples/azure-pipelines.yml); the essentials:
 
 ```yaml
 trigger: none # run from the branch policy (build validation), not on push
@@ -33,6 +35,12 @@ steps:
   - publish: $(Build.SourcesDirectory)/.air-review/reports
     artifact: air-review-reports
     condition: succeededOrFailed()
+  # ... your build and test steps ...
+  - script: air-review approve --plain
+    displayName: Approve the pull request
+    condition: succeeded() # only when review, build and tests all passed
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 ```
 
 Attach the pipeline to the target branch as a **build validation** policy
@@ -125,8 +133,9 @@ platform:
     tokenEnv: SYSTEM_ACCESSTOKEN
     apiVersion: "7.1"
     vote:
-      enabled: true # add the identity as a reviewer and cast the verdict
-      approveWithSuggestions: true # vote 5 when only non-blocking findings remain (else no vote)
+      enabled: true # add the identity as a reviewer and vote
+      approveWithSuggestions: true # vote 5 when only nitpicks remain (else no vote)
+      mode: pipeline # pipeline (default): approval cast by `air-review approve`; immediate: the review step votes
     status:
       enabled: false # post a pull-request status usable by a "Status" branch policy
       genre: air-review
@@ -137,11 +146,11 @@ platform:
 
 ## Threads as review memory
 
-| Thread          | Content                                                                                  | Status                                                                                               |
-| --------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| state           | the machine-readable `air-review:state` envelope (SHAs, findings, fingerprints, metrics) | `closed`, so it stays collapsed                                                                      |
-| summary         | verdict, routing, findings table, "since the last review", cost per step, workflow       | `active` while findings are open, `fixed` once all were resolved, `closed` if nothing to report      |
-| one per finding | the finding, anchored on the head side of the file (`threadContext.rightFileStart/End`)  | `active`; `fixed` with a "Resolved" reply when it no longer reproduces; back to `active` if reopened |
+| Thread          | Content                                                                                                                            | Status                                                                                                                                                               |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| state           | the machine-readable `air-review:state` envelope (SHAs, findings, fingerprints, metrics)                                           | `closed`, so it stays collapsed                                                                                                                                      |
+| summary         | verdict, routing, findings table, "since the last review", cost per step, workflow                                                 | `active` while findings are open, `fixed` once all were resolved, `closed` if nothing to report                                                                      |
+| one per finding | the finding, anchored on the head side of the file (`threadContext.rightFileStart/End`); follow-ups are replies in the same thread | `active`; `fixed` with a "Resolved" reply when it no longer reproduces; back to `active` with a reply if the code changed but the finding stands, or if it reappears |
 
 Thread statuses `active`, `fixed`, `wontFix`, `closed`, `byDesign`, `pending`
 are the documented `CommentThreadStatus` values
@@ -162,34 +171,56 @@ a replacement thread and parks the old one. A stale-head guard re-reads the
 pull request before writing: if a newer push landed meanwhile, nothing is
 published.
 
+### Follow-ups stay in the thread
+
+When a push changes the lines around an open finding but the finding still
+stands (a partial fix), the adapter does not rewrite the first comment and
+never opens a second thread: it **replies in the existing thread** with the
+remaining change ("After the latest change (`<sha>`) — still open … **Next
+step:** …") and sets the thread back to `active`. A resolved finding that
+comes back gets the same treatment ("Back on `<sha>` — this finding
+reappeared."). Reconciliation flags these findings (`changedSinceLastReview`,
+event `updated` in the summary's "since the last review").
+
 ### Incremental review on a new push
 
-| Push                                                                 | What happens                                                                                                                                             | Model calls                                        |
-| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| same head, same configuration (re-queued build)                      | nothing is reviewed again, even with `--publish`; `--force` overrides                                                                                    | 0                                                  |
-| new commits                                                          | the delta is computed **since the last reviewed head**; only those files reach the reviewer; previous findings are reconciled (kept, resolved, reopened) | triage + reviewer + verifier on the new delta only |
-| new commits touching only docs or binaries (`review.modelSkipKinds`) | deterministic rules run, previous findings carried over, summary notes "nothing new for the reviewer"                                                    | 0                                                  |
-| target branch moved                                                  | full re-review against the new base; existing threads are updated, not duplicated                                                                        | as a full review                                   |
-| configuration or models changed                                      | full re-review; findings are matched to existing threads                                                                                                 | as a full review                                   |
+| Push                                                                 | What happens                                                                                                                                                                                               | Model calls                                        |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| same head, same configuration (re-queued build)                      | nothing is reviewed again, even with `--publish`; `--force` overrides                                                                                                                                      | 0                                                  |
+| new commits                                                          | the delta is computed **since the last reviewed head**; only those files reach the reviewer; previous findings are reconciled (kept, resolved, reopened, or continued in their thread after a partial fix) | triage + reviewer + verifier on the new delta only |
+| new commits touching only docs or binaries (`review.modelSkipKinds`) | deterministic rules run, previous findings carried over, summary notes "nothing new for the reviewer"                                                                                                      | 0                                                  |
+| target branch moved                                                  | full re-review against the new base; existing threads are updated, not duplicated                                                                                                                          | as a full review                                   |
+| configuration or models changed                                      | full re-review; findings are matched to existing threads                                                                                                                                                   | as a full review                                   |
 
 The local result cache (`cache.dir`) additionally serves identical reviewer
 inputs without a request.
 
 ## Vote and status: a real reviewer
 
-After publishing, the adapter registers the reviewing identity as a reviewer
-and casts the verdict with
-`PUT .../pullRequests/{id}/reviewers/{reviewerId}` and a `vote` body. The
-documented values are "10 - approved 5 - approved with suggestions 0 - no vote
--5 - waiting for author -10 - rejected"
+Votes use `PUT .../pullRequests/{id}/reviewers/{reviewerId}` with a `vote`
+body; the documented values are "10 - approved 5 - approved with suggestions
+0 - no vote -5 - waiting for author -10 - rejected"
 ([Pull Request Reviewers - Create](https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-reviewers/create-pull-request-reviewer?view=azure-devops-rest-7.1)).
 
-| Verdict                   | Condition                                                                       | Vote                              |
-| ------------------------- | ------------------------------------------------------------------------------- | --------------------------------- |
-| Approved                  | no open finding                                                                 | `10`                              |
-| Approved with suggestions | open findings, none blocking (gate passed), `vote.approveWithSuggestions: true` | `5`                               |
-| Changes requested         | the gate failed (blocking `IN_PR` findings above the confidence threshold)      | `-5`                              |
-| Commented                 | the review could not complete (model error)                                     | `0`, never a vote on partial data |
+Approval works like a human reviewer's: the review happens early, on every
+push, and the approving vote is the **last word of the pipeline**, cast only
+when the review, the build and the tests have all succeeded. Two steps:
+
+| Step                          | When it runs                                              | Verdict                     | Condition                                                                                  | Vote                              |
+| ----------------------------- | --------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------- |
+| `air-review review --publish` | first, on every push                                      | Changes requested           | the gate failed: an open BLOCKER / CRITICAL / MAJOR / MINOR at confidence ≥ 0.6 (exit 10)  | `-5`                              |
+|                               |                                                           | Approved / with suggestions | gate passed                                                                                | no vote yet (`mode: pipeline`)    |
+|                               |                                                           | Commented                   | the review could not complete (model error)                                                | `0`, never a vote on partial data |
+| `air-review approve`          | last, with `condition: succeeded()` after build and tests | Approved                    | no open finding                                                                            | `10`                              |
+|                               |                                                           | Approved with suggestions   | only NITPICK / INFO or low-confidence findings open, `vote.approveWithSuggestions: true`   | `5`                               |
+|                               |                                                           | refused                     | blocking findings open (exit 10), or the review did not examine the current head (exit 40) | none                              |
+
+`air-review approve` reads the state thread already in the pull request (no
+model call) and never approves a head the review did not examine.
+`platform.azureDevops.vote.mode: immediate` makes the review step cast the
+final vote itself, for single-step pipelines. The three-step layout (review,
+your build and tests, approve) is in
+[examples/azure-pipelines.yml](../examples/azure-pipelines.yml).
 
 The tool never casts `-10` and never completes or merges the pull request.
 With `platform.azureDevops.status.enabled: true` it also posts a pull-request

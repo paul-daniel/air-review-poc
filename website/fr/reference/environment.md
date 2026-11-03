@@ -6,34 +6,34 @@ Les secrets sont marqués **oui** : rangez-les dans un magasin de secrets CI ou 
 
 ## Fournisseur
 
-| Variable                          | Secret  | Signification                                                                                                                                                                      |
-| --------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AIR_REVIEW_PROVIDER`             | non     | identifiant de preset : `openai`, `azure-openai`, `azure-foundry`, `bedrock`, `google`, `anthropic`, `mistral`, `groq`, `openrouter`, `together`, `fireworks`, `openai-compatible` |
-| `AIR_REVIEW_BASE_URL`             | non     | racine du point de terminaison, sans le chemin de chat ; surcharge le défaut du preset                                                                                             |
-| `AIR_REVIEW_API_KEY`              | **oui** | la valeur de la clé elle-même (le plus simple pour les magasins de secrets CI)                                                                                                     |
-| `AIR_REVIEW_API_KEY_ENV`          | non     | le **nom** d'une autre variable qui contient la clé                                                                                                                                |
-| `AIR_REVIEW_ACCESS_TOKEN`         | **oui** | jeton de courte durée (Microsoft Entra ID, passerelles OAuth) ; envoyé en `Authorization: Bearer`, implique `AIR_REVIEW_AUTH=bearer`                                               |
-| `AIR_REVIEW_AUTH`                 | non     | `api-key` ou `bearer`                                                                                                                                                              |
-| `AIR_REVIEW_API`                  | non     | `auto` (défaut), `chat-completions` ou `responses`                                                                                                                                 |
-| `AIR_REVIEW_MAX_TOKENS_PARAMETER` | non     | `max_tokens` ou `max_completion_tokens` (Azure utilise le second par défaut)                                                                                                       |
+| Variable                          | Secret  | Signification                                                                                                                                                                                                                                                                                               |
+| --------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AIR_REVIEW_PROVIDER`             | non     | identifiant de preset : `openai`, `azure-openai`, `azure-foundry`, `bedrock`, `google`, `anthropic`, `mistral`, `groq`, `openrouter`, `together`, `fireworks`, `openai-compatible`                                                                                                                          |
+| `AIR_REVIEW_BASE_URL`             | non     | racine du point de terminaison, sans le chemin de chat ; surcharge le défaut du preset                                                                                                                                                                                                                      |
+| `AIR_REVIEW_API_KEY`              | **oui** | la valeur de la clé elle-même (le plus simple pour les magasins de secrets CI)                                                                                                                                                                                                                              |
+| `AIR_REVIEW_API_KEY_ENV`          | non     | le **nom** d'une autre variable qui contient la clé                                                                                                                                                                                                                                                         |
+| `AIR_REVIEW_ACCESS_TOKEN`         | **oui** | jeton de courte durée (Microsoft Entra ID, passerelles OAuth) ; envoyé en `Authorization: Bearer`, implique `AIR_REVIEW_AUTH=bearer`. Sur les presets Foundry, sans clé ni jeton, l'identité Entra ID sans clé est utilisée (`DefaultAzureCredential` : `az login`, identité managée, connexion de service) |
+| `AIR_REVIEW_AUTH`                 | non     | `api-key` ou `bearer`                                                                                                                                                                                                                                                                                       |
+| `AIR_REVIEW_API`                  | non     | `auto` (défaut), `chat-completions` ou `responses`                                                                                                                                                                                                                                                          |
+| `AIR_REVIEW_MAX_TOKENS_PARAMETER` | non     | `max_tokens` ou `max_completion_tokens` (Azure utilise le second par défaut)                                                                                                                                                                                                                                |
 
 ### Variables de clé des presets
 
 Chaque preset lit sa propre variable quand `AIR_REVIEW_API_KEY` et `AIR_REVIEW_API_KEY_ENV` ne sont pas définies. Ne définissez que celle que vous utilisez.
 
-| Variable                   | Preset                           | Secret  |
-| -------------------------- | -------------------------------- | ------- |
-| `OPENAI_API_KEY`           | `openai`                         | **oui** |
-| `AZURE_OPENAI_API_KEY`     | `azure-openai`                   | **oui** |
-| `AZURE_AI_API_KEY`         | `azure-foundry`                  | **oui** |
-| `AWS_BEARER_TOKEN_BEDROCK` | `bedrock` (clé d'API, pas SigV4) | **oui** |
-| `GEMINI_API_KEY`           | `google`                         | **oui** |
-| `ANTHROPIC_API_KEY`        | `anthropic`                      | **oui** |
-| `MISTRAL_API_KEY`          | `mistral`                        | **oui** |
-| `GROQ_API_KEY`             | `groq`                           | **oui** |
-| `OPENROUTER_API_KEY`       | `openrouter`                     | **oui** |
-| `TOGETHER_API_KEY`         | `together`                       | **oui** |
-| `FIREWORKS_API_KEY`        | `fireworks`                      | **oui** |
+| Variable                   | Preset                                                 | Secret  |
+| -------------------------- | ------------------------------------------------------ | ------- |
+| `OPENAI_API_KEY`           | `openai`                                               | **oui** |
+| `AZURE_OPENAI_API_KEY`     | `azure-openai`                                         | **oui** |
+| `AZURE_AI_API_KEY`         | `azure-foundry` (facultatif : Entra ID sans clé sinon) | **oui** |
+| `AWS_BEARER_TOKEN_BEDROCK` | `bedrock` (clé d'API, pas SigV4)                       | **oui** |
+| `GEMINI_API_KEY`           | `google`                                               | **oui** |
+| `ANTHROPIC_API_KEY`        | `anthropic`                                            | **oui** |
+| `MISTRAL_API_KEY`          | `mistral`                                              | **oui** |
+| `GROQ_API_KEY`             | `groq`                                                 | **oui** |
+| `OPENROUTER_API_KEY`       | `openrouter`                                           | **oui** |
+| `TOGETHER_API_KEY`         | `together`                                             | **oui** |
+| `FIREWORKS_API_KEY`        | `fireworks`                                            | **oui** |
 
 ## Rôles de modèle
 
