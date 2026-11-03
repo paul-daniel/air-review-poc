@@ -68,10 +68,23 @@ remarques et le coût. Commitez `air-review.yaml`.
    requests** sur _Allow_.
 5. **Project settings → Repositories → votre dépôt → Policies → Branch policies → `main` → Build validation → +** : choisissez la pipeline, déclenchement _Automatic_, stratégie _Required_.
 
+6. **Identifiants Foundry.** Sur une organisation d'entreprise avec des agents
+   hébergés par Microsoft, préférez une **connexion de service Azure Resource
+   Manager** (Project settings → Service connections → New → Azure Resource
+   Manager, fédération d'identité) à une clé API : donnez à son identité le
+   rôle **Azure AI User** sur la ressource Foundry et décommentez l'étape
+   « Sign in to Azure » du YAML. Aucune clé à stocker ni à renouveler. Sur un
+   agent auto-hébergé, le `az login` de l'agent suffit.
+7. **Première exécution.** La première exécution s'arrête sur « This pipeline
+   needs permission to access a resource » : ouvrez l'exécution, cliquez
+   **View** puis **Permit** (pool d'agents, groupe de variables). Une fois par
+   pipeline.
+
 **Vérification :** aucune erreur à l'enregistrement. Si votre organisation n'a
 pas encore d'agents hébergés (« No hosted parallelism »), demandez la
 dotation gratuite ou installez un agent auto-hébergé (voir
-[azure-devops.md](../azure-devops.md)).
+[azure-devops.md](../azure-devops.md)). Une fois la stratégie attachée, `main`
+ne change plus que par pull request, y compris pour le fichier de pipeline.
 
 ## Partie 4 — Première pull request (5 min)
 
@@ -89,12 +102,15 @@ l'étape suivante dans le même fil.
 
 ## Si quelque chose ne va pas
 
-| Symptôme                                       | Quoi faire                                                                       |
-| ---------------------------------------------- | -------------------------------------------------------------------------------- |
-| `doctor` dit qu'il manque l'identifiant        | `az login`, ou définissez `AIR_REVIEW_API_KEY`                                   |
-| la sonde de `doctor` échoue en 404             | le nom de déploiement dans `air-review.yaml` ne correspond pas au portail        |
-| pipeline : HTTP 403 à la publication           | étape 4 de la partie 3 (Contribute to pull requests)                             |
-| pipeline : « No hosted parallelism »           | demandez la dotation ou utilisez un agent auto-hébergé                           |
-| la revue n'a rien trouvé sur un bug volontaire | regardez le tier dans la synthèse ; forcez `--tier heavy` une fois pour comparer |
+| Symptôme                                                           | Quoi faire                                                                                                   |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `doctor` dit qu'il manque l'identifiant                            | `az login`, ou définissez `AIR_REVIEW_API_KEY`                                                               |
+| la sonde de `doctor` échoue en 404                                 | le nom de déploiement dans `air-review.yaml` ne correspond pas au portail                                    |
+| pipeline : HTTP 403 à la publication                               | étape 4 de la partie 3 (Contribute to pull requests)                                                         |
+| pipeline : « No hosted parallelism »                               | demandez la dotation ou utilisez un agent auto-hébergé                                                       |
+| la revue n'a rien trouvé sur un bug volontaire                     | regardez le tier dans la synthèse ; forcez `--tier heavy` une fois pour comparer                             |
+| une remarque ne mérite pas de correction                           | mettez le fil sur **Resolved**, **Won't fix** ou **Closed** : l'outil le respecte et cesse de bloquer        |
+| pipeline : « This pipeline needs permission to access a resource » | ouvrez l'exécution, **View**, **Permit** (première fois seulement)                                           |
+| pipeline : Foundry 401 sans clé configurée                         | l'étape de connexion manque (connexion de service) ou l'agent n'a pas de `az login` ; voir partie 3, étape 6 |
 
 Pour le reste : [azure-devops.md](../azure-devops.md), [foundry.md](../foundry.md), [observability.md](../observability.md).

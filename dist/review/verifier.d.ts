@@ -9,10 +9,6 @@ export interface VerificationPass {
     }>;
     usage: Usage;
 }
-/**
- * Deterministic verifier: the mandatory pass before anything is published.
- * Drops duplicates, malformed anchors, and findings outside the delta.
- */
 export declare function deterministicVerify(config: AirReviewConfig, candidates: CandidateFinding[], addedLinesByFile: Map<string, Set<number>>, strictAnchor?: (finding: CandidateFinding) => boolean): {
     findings: CandidateFinding[];
     dropped: Array<{

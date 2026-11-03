@@ -67,9 +67,22 @@ cost. Commit `air-review.yaml`.
    requests** to _Allow_.
 5. **Project settings → Repositories → your repository → Policies → Branch policies → `main` → Build validation → +**: pick the pipeline, trigger _Automatic_, policy _Required_.
 
+6. **Credentials for Foundry.** On a work organisation with Microsoft-hosted
+   agents, prefer an **Azure Resource Manager service connection** (Project
+   settings → Service connections → New → Azure Resource Manager, workload
+   identity federation) over an API key: give its identity the **Azure AI
+   User** role on the Foundry resource and uncomment the "Sign in to Azure"
+   step of the YAML. No key to store or rotate. On a self-hosted agent, the
+   agent's own `az login` works as is.
+7. **First run.** The first run of the pipeline stops with "This pipeline needs
+   permission to access a resource": open the run, click **View** then
+   **Permit** (agent pool, variable group). Once per pipeline.
+
 **Check:** no error on save. If your organisation has no hosted agents yet
 ("No hosted parallelism"), request the free grant or register a self-hosted
-agent (see [Azure DevOps](/integrations/azure-devops)).
+agent (see [Azure DevOps](/integrations/azure-devops)). Note that once the policy is
+attached, `main` only changes through pull requests, including for the
+pipeline file itself.
 
 ## Part 4 — First pull request (5 min)
 
@@ -86,12 +99,15 @@ Push a fix: only the changed lines are reviewed, resolved threads get a
 
 ## When something goes wrong
 
-| Symptom                                       | What to do                                                          |
-| --------------------------------------------- | ------------------------------------------------------------------- |
-| `doctor` says the credential is missing       | `az login`, or set `AIR_REVIEW_API_KEY`                             |
-| `doctor` probe fails with 404                 | the deployment name in `air-review.yaml` does not match the portal  |
-| pipeline: HTTP 403 when publishing            | step 4 of part 3 (Contribute to pull requests)                      |
-| pipeline: "No hosted parallelism"             | request the grant or use a self-hosted agent                        |
-| the review found nothing on a bug you planted | check the tier in the summary; force `--tier heavy` once to compare |
+| Symptom                                                         | What to do                                                                                           |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `doctor` says the credential is missing                         | `az login`, or set `AIR_REVIEW_API_KEY`                                                              |
+| `doctor` probe fails with 404                                   | the deployment name in `air-review.yaml` does not match the portal                                   |
+| pipeline: HTTP 403 when publishing                              | step 4 of part 3 (Contribute to pull requests)                                                       |
+| pipeline: "No hosted parallelism"                               | request the grant or use a self-hosted agent                                                         |
+| the review found nothing on a bug you planted                   | check the tier in the summary; force `--tier heavy` once to compare                                  |
+| a remark is not worth fixing                                    | set the thread to **Resolved**, **Won't fix** or **Closed**: the tool respects it and stops blocking |
+| pipeline: "This pipeline needs permission to access a resource" | open the run, **View**, **Permit** (first run only)                                                  |
+| pipeline: Foundry 401 with no key configured                    | the sign-in step is missing (service connection) or the agent has no `az login`; see part 3, step 6  |
 
 Everything else: [Azure DevOps](/integrations/azure-devops), [Microsoft Foundry](/integrations/microsoft-foundry), [Troubleshooting](/troubleshooting).

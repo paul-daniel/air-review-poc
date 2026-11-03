@@ -31,7 +31,11 @@ async function subscriptionCleanupFindings(ctx: RuleContext): Promise<CandidateF
         subscription && !subscription[2]!.includes(";")
           ? {
               language: "typescript",
-              code: `${subscription[1]}\n  .pipe(${CLEANUP_OPERATOR}(this.destroyRef))\n  .subscribe(${subscription[2]});`,
+              code:
+                `import { DestroyRef, inject } from '@angular/core';\n` +
+                `import { ${CLEANUP_OPERATOR} } from '@angular/core/rxjs-interop';\n\n` +
+                `private readonly destroyRef = inject(DestroyRef);\n\n` +
+                `${subscription[1]}\n  .pipe(${CLEANUP_OPERATOR}(this.destroyRef))\n  .subscribe(${subscription[2]});`,
               replacesAnchor: false,
             }
           : undefined;
@@ -49,7 +53,9 @@ async function subscriptionCleanupFindings(ctx: RuleContext): Promise<CandidateF
           (repoHasConvention
             ? `This repo uses \`${CLEANUP_OPERATOR}()\` in ${repoUsers.length} ${repoUsers.length === 1 ? "file" : "files"}.`
             : `Add cleanup to this subscription; a repository-wide refactor is not needed.`),
-        suggestion: `${repoHasConvention ? "Use the same cleanup operator here." : "Tie this subscription to the component lifecycle."} Import \`DestroyRef\` and \`inject\` from \`@angular/core\`, and \`${CLEANUP_OPERATOR}\` from \`@angular/core/rxjs-interop\`. Add \`private readonly destroyRef = inject(DestroyRef);\` to the component.${suggestedCode ? "" : ` Pipe the stream through \`${CLEANUP_OPERATOR}(this.destroyRef)\` before subscribing.`}`,
+        suggestion: suggestedCode
+          ? `Tie the subscription to the component lifecycle with \`${CLEANUP_OPERATOR}\`${repoHasConvention ? ", as the rest of this repository does" : ""}.`
+          : `Pipe the stream through \`${CLEANUP_OPERATOR}(this.destroyRef)\` before subscribing (inject \`DestroyRef\` from \`@angular/core\`).`,
         suggestedCode,
         anchor: {
           file: file.path,

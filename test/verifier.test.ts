@@ -160,3 +160,36 @@ describe("deterministicVerify dedupes model findings against deterministic ones"
     });
   });
 });
+
+describe("taste remarks never block", () => {
+  it("caps heuristic maintainability/consistency/tests/docs findings at NITPICK", async () => {
+    const { deterministicVerify } = await import("../src/review/verifier.js");
+    const { defaultConfig } = await import("../src/config/defaults.js");
+    const base = {
+      ruleId: "r",
+      confidence: 0.9,
+      scope: "IN_PR" as const,
+      title: "Could be clearer",
+      summary: "Naming could be clearer.",
+      anchor: { file: "a.ts", startLine: 3, endLine: 3 },
+      evidence: [],
+    };
+    const result = deterministicVerify(
+      defaultConfig(),
+      [
+        { ...base, severity: "MINOR", ruleOrigin: "HEURISTIC", category: "maintainability" },
+        { ...base, severity: "MAJOR", ruleOrigin: "HEURISTIC", category: "correctness", title: "Wrong unit" },
+        {
+          ...base,
+          severity: "MINOR",
+          ruleOrigin: "REPO_CONVENTION",
+          category: "consistency",
+          title: "Convention",
+        },
+      ],
+      new Map([["a.ts", new Set([3])]]),
+    );
+    const bySeverity = result.findings.map((f) => `${f.title}:${f.severity}`).sort();
+    expect(bySeverity).toEqual(["Convention:MINOR", "Could be clearer:NITPICK", "Wrong unit:MAJOR"]);
+  });
+});
