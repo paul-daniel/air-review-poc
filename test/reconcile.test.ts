@@ -239,3 +239,54 @@ describe("proximity match prefers an open finding over a resolved one", () => {
     expect(result.events).toEqual([]);
   });
 });
+
+describe("reconcile: partial fixes", () => {
+  it("flags an open finding whose code the push touched but did not settle", () => {
+    const old = previous({ threadRef: { platform: "azure-devops", id: "12:1" } });
+    // The author edited line 5, next to the anchored line 4, and the rule still fires.
+    const touched: RepositoryDelta = {
+      fromSha: "a",
+      toSha: "b",
+      diff: "",
+      files: [{ path: "a.ts", status: "modified", addedLines: [5], removedLines: [5] }],
+    };
+    const result = reconcile(
+      [old],
+      [candidate({ anchor: { file: "a.ts", startLine: 4, endLine: 4, symbol: "Widget" } })],
+      touched,
+      "sha256:cfg",
+      "head",
+      { incremental: true },
+    );
+    expect(result.findings[0]).toMatchObject({
+      id: "arf_aaaaaa",
+      status: "OPEN",
+      changedSinceLastReview: true,
+    });
+    expect(result.events).toContainEqual({
+      event: "updated",
+      findingId: "arf_aaaaaa",
+      detail: "code changed, finding still open",
+    });
+  });
+
+  it("does not flag a finding when the push changed other parts of the file", () => {
+    const old = previous();
+    const far: RepositoryDelta = {
+      fromSha: "a",
+      toSha: "b",
+      diff: "",
+      files: [{ path: "a.ts", status: "modified", addedLines: [80], removedLines: [] }],
+    };
+    const result = reconcile(
+      [old],
+      [candidate({ anchor: { file: "a.ts", startLine: 4, endLine: 4, symbol: "Widget" } })],
+      far,
+      "sha256:cfg",
+      "head",
+      { incremental: true },
+    );
+    expect(result.findings[0]?.changedSinceLastReview).toBeUndefined();
+    expect(result.events).toEqual([]);
+  });
+});

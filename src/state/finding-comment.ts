@@ -58,6 +58,42 @@ export interface FindingCommentOptions {
  *   **Evidence** bullets                            ← why we believe it
  *   <sub>scope · confidence · rule · id</sub>       ← machine-readable footer
  */
+/**
+ * Reply posted in an existing finding thread after the author pushed a change
+ * that touched the code but did not settle the finding, or when a resolved
+ * finding comes back. It states what remains to be done, without judging the
+ * attempt.
+ */
+export function renderFollowUpComment(
+  finding: Finding,
+  headSha: string,
+  options: FindingCommentOptions = {},
+): string {
+  const lines: string[] = [
+    finding.status === "REOPENED"
+      ? `**Back on \`${headSha.slice(0, 8)}\`** — this finding reappeared.`
+      : `**After the latest change (\`${headSha.slice(0, 8)}\`)** — still open:`,
+    "",
+    `\`${finding.anchor.file}:${finding.anchor.startLine}${finding.anchor.endLine > finding.anchor.startLine ? `-${finding.anchor.endLine}` : ""}\` · ${SEVERITY_ICON[finding.severity]} ${finding.severity}`,
+    "",
+    finding.summary,
+  ];
+  if (finding.suggestion) lines.push("", `**Next step:** ${finding.suggestion}`);
+  if (finding.suggestedCode) {
+    const fence = "`".repeat(
+      Math.max(3, ...[...finding.suggestedCode.code.matchAll(/`+/g)].map((m) => m[0].length + 1)),
+    );
+    const language = finding.suggestedCode.language.replace(/[^a-zA-Z0-9+#.-]/g, "");
+    const committable = options.suggestionBlocks && finding.suggestedCode.replacesAnchor;
+    lines.push("", fence + (committable ? "suggestion" : language), finding.suggestedCode.code, fence);
+  }
+  lines.push(
+    "",
+    `<sub>confidence ${Number(finding.confidence).toFixed(2)} · air-review-id ${finding.id}</sub>`,
+  );
+  return lines.join("\n");
+}
+
 export function renderFindingComment(finding: Finding, options: FindingCommentOptions = {}): string {
   const lines: string[] = [
     findingMarker(finding.id),

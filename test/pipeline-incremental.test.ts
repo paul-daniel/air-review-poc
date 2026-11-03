@@ -126,7 +126,7 @@ describe("incremental review and caching", () => {
     expect(counted.calls).toEqual(["review findings", "verifier verdicts"]);
     expect(outcome.findings).toHaveLength(1);
     expect(outcome.findings[0]).toMatchObject({ severity: "MAJOR", category: "correctness", status: "OPEN" });
-    expect(outcome.summary.verdict).toBe("approve-with-suggestions");
+    expect(outcome.summary.verdict).toBe("request-changes"); // a MAJOR blocks approval
     expect(outcome.summary.metrics.routing).toMatchObject({
       tier: "light",
       reviewerModel: "mock-small",

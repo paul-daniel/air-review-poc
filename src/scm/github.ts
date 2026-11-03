@@ -5,7 +5,7 @@ import { ScmError } from "../errors.js";
 import { parseUnifiedDiff } from "../context/diff.js";
 import { STATE_MARKER_OPEN } from "../state/ledger.js";
 import { SUMMARY_MARKER_OPEN } from "../state/summary.js";
-import { renderFindingComment } from "../state/finding-comment.js";
+import { renderFindingComment, renderFollowUpComment } from "../state/finding-comment.js";
 
 export interface GitHubAdapterOptions {
   owner: string;
@@ -18,6 +18,11 @@ export interface GitHubAdapterOptions {
 }
 
 /** ThreadRef id prefix for findings published as general PR comments rather than review comments. */
+/** Marker of a follow-up posted as a general comment (it never replaces the finding's own marker). */
+function findingMarkerReply(id: string): string {
+  return `<!-- air-review:follow-up:${id} -->`;
+}
+
 const GENERAL_COMMENT_PREFIX = "issue:";
 
 export class GitHubAdapter implements ScmAdapter {
@@ -219,6 +224,38 @@ export class GitHubAdapter implements ScmAdapter {
       throw new ScmError(`Could not update finding ${finding.id}: ${(error as Error).message}`, {
         cause: error,
       });
+    }
+  }
+
+  /** Continue the finding's conversation: a reply to the review comment (or a new PR comment for general ones). */
+  async replyToFinding(ref: ThreadRef, finding: Finding): Promise<void> {
+    this.requireToken(`reply in finding thread ${ref.id}`);
+    if (!this.snapshot) throw new ScmError("Pull request snapshot not loaded");
+    const body = renderFollowUpComment(finding, this.snapshot.headSha, { suggestionBlocks: true });
+    try {
+      if (ref.id.startsWith(GENERAL_COMMENT_PREFIX)) {
+        await this.octokit.rest.issues.createComment({
+          owner: this.options.owner,
+          repo: this.options.repo,
+          issue_number: this.options.pullNumber,
+          body: `${findingMarkerReply(finding.id)}\n${body}`,
+        });
+        return;
+      }
+      await this.octokit.rest.pulls.createReplyForReviewComment({
+        owner: this.options.owner,
+        repo: this.options.repo,
+        pull_number: this.options.pullNumber,
+        comment_id: Number(ref.id),
+        body,
+      });
+    } catch (error) {
+      throw new ScmError(
+        `Could not reply in the thread of finding ${finding.id}: ${(error as Error).message}`,
+        {
+          cause: error,
+        },
+      );
     }
   }
 

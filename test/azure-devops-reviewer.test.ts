@@ -198,3 +198,25 @@ describe("reviewer vote and status", () => {
     expect(incomplete.calls.find((c) => c.method === "PUT")?.body).toEqual({ vote: 0, id: "me-guid" });
   });
 });
+
+describe("continuing a finding thread", () => {
+  it("replies in the existing thread with the remaining change and reactivates it", async () => {
+    const { scm, calls } = adapter([]);
+    await scm.getPullRequest();
+    await scm.replyToFinding(
+      { platform: "azure-devops", id: "42:1" },
+      { ...finding, changedSinceLastReview: true, suggestion: "Pipe the stream through takeUntilDestroyed." },
+    );
+    const reply = calls.find((c) => c.method === "POST" && c.url.includes("/threads/42/comments?"));
+    expect(reply).toBeDefined();
+    expect(reply!.body).toMatchObject({ parentCommentId: 1, commentType: "text" });
+    const content = (reply!.body as { content: string }).content;
+    expect(content).toContain("After the latest change");
+    expect(content).toContain("**Next step:** Pipe the stream through takeUntilDestroyed.");
+    expect(content).not.toContain("air-review:finding:"); // the thread's own marker stays on the first comment
+    expect(calls.find((c) => c.method === "PATCH" && c.url.includes("/threads/42?"))?.body).toEqual({
+      status: "active",
+    });
+    expect(calls.filter((c) => c.method === "POST" && c.url.includes("/threads?"))).toHaveLength(0);
+  });
+});

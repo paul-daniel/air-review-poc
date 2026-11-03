@@ -303,3 +303,66 @@ describe("GitHubAdapter interaction findings", () => {
     expect(ref.id).toBe("issue:778");
   });
 });
+
+describe("GitHubAdapter follow-ups", () => {
+  it("replies to the review comment instead of creating a second one", async () => {
+    const calls = {
+      pullsGet: vi.fn().mockResolvedValue({
+        data: {
+          number: 42,
+          title: "t",
+          base: { ref: "main", sha: "b" },
+          head: { ref: "feat/x", sha: "h0123456789" },
+        },
+      }),
+      createReplyForReviewComment: vi.fn().mockResolvedValue({ data: { id: 99 } }),
+      createReviewComment: vi.fn(),
+      createComment: vi.fn(),
+    };
+    const scm = new GitHubAdapter({
+      owner: "acme",
+      repo: "storefront",
+      pullNumber: 42,
+      token: "test-token",
+      octokit: {
+        rest: {
+          pulls: {
+            get: calls.pullsGet,
+            createReplyForReviewComment: calls.createReplyForReviewComment,
+            createReviewComment: calls.createReviewComment,
+          },
+          issues: { createComment: calls.createComment },
+        },
+      } as never,
+    });
+    await scm.getPullRequest();
+    await scm.replyToFinding(
+      { platform: "github", id: "777" },
+      {
+        id: "arf_fol1ow",
+        ruleId: "r",
+        ruleOrigin: "HEURISTIC",
+        severity: "MINOR",
+        confidence: 0.8,
+        scope: "IN_PR",
+        title: "t",
+        summary: "Still returns the wrong unit.",
+        suggestion: "Divide by 100.",
+        anchor: { file: "src/a.ts", startLine: 3, endLine: 3 },
+        evidence: [],
+        fingerprint: "fp",
+        status: "OPEN",
+        changedSinceLastReview: true,
+      },
+    );
+    expect(calls.createReplyForReviewComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        comment_id: 777,
+        pull_number: 42,
+        body: expect.stringContaining("**Next step:** Divide by 100."),
+      }),
+    );
+    expect(calls.createReviewComment).not.toHaveBeenCalled();
+    expect(calls.createComment).not.toHaveBeenCalled();
+  });
+});

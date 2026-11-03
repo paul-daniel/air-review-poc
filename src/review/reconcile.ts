@@ -107,6 +107,17 @@ export function reconcile(
     if (previousMatch?.status === "RESOLVED") {
       events.push({ event: "reopened", findingId: id, detail: "finding reappeared after fix" });
     }
+    // The author changed the lines around an open finding and it still stands:
+    // the reviewer will continue in the thread rather than rewrite its comment.
+    const touched =
+      previousMatch !== undefined &&
+      previousMatch.status !== "RESOLVED" &&
+      previousMatch.status !== "WONT_FIX" &&
+      options.incremental &&
+      touchesAnchor(delta, candidate.anchor);
+    if (touched) {
+      events.push({ event: "updated", findingId: id, detail: "code changed, finding still open" });
+    }
     return {
       id,
       fingerprint,
@@ -118,6 +129,7 @@ export function reconcile(
         firstSeenSha: previousMatch?.firstSeenSha ?? headSha,
         lastCheckedSha: headSha,
         threadRef: previousMatch?.threadRef,
+        ...(touched ? { changedSinceLastReview: true } : {}),
       } satisfies Finding,
     };
   });
@@ -186,6 +198,17 @@ export function reconcile(
       .map((c) => c.finding)
       .filter((f) => f.status === "OPEN" || f.status === "REOPENED"),
   };
+}
+
+/** Lines of slack around an anchor when deciding that a push touched a finding's code. */
+const TOUCH_TOLERANCE = 5;
+
+function touchesAnchor(delta: RepositoryDelta, anchor: Finding["anchor"]): boolean {
+  const change = delta.files.find((f) => f.path === anchor.file);
+  if (!change) return false;
+  const near = (line: number) =>
+    line >= anchor.startLine - TOUCH_TOLERANCE && line <= anchor.endLine + TOUCH_TOLERANCE;
+  return change.addedLines.some(near) || change.removedLines.some(near);
 }
 
 function severityRank(severity: Finding["severity"]): number {

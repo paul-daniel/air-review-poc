@@ -31,7 +31,7 @@ import type { GitRepository } from "../context/repository.js";
 import { parseUnifiedDiff } from "../context/diff.js";
 import { STATE_MARKER_OPEN } from "../state/ledger.js";
 import { SUMMARY_MARKER_OPEN, upsertSummaryBody } from "../state/summary.js";
-import { findingMarker, renderFindingComment } from "../state/finding-comment.js";
+import { findingMarker, renderFindingComment, renderFollowUpComment } from "../state/finding-comment.js";
 import {
   AzureDevOpsClient,
   AzureDevOpsHttpError,
@@ -386,6 +386,27 @@ export class AzureDevOpsAdapter implements ScmAdapter {
       throw new ScmError(`Could not update finding ${finding.id}: ${(error as Error).message}`, {
         cause: error,
       });
+    }
+  }
+
+  /** Continue the finding's thread: a reply with what is still to be done, thread back to active. */
+  async replyToFinding(ref: ThreadRef, finding: Finding): Promise<void> {
+    const { threadId, commentId } = parseThreadRef(ref);
+    const head = this.snapshot?.headSha ?? "";
+    try {
+      await this.replyTo(threadId, commentId, renderFollowUpComment(finding, head));
+      try {
+        await this.setThreadStatus(threadId, "active");
+      } catch {
+        /* status change refused by the platform: the reply still stands */
+      }
+    } catch (error) {
+      throw new ScmError(
+        `Could not reply in the thread of finding ${finding.id}: ${(error as Error).message}`,
+        {
+          cause: error,
+        },
+      );
     }
   }
 

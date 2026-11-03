@@ -45,6 +45,12 @@ export interface ScmAdapter {
   createInlineFinding(finding: Finding): Promise<ThreadRef>;
   updateFinding(ref: ThreadRef, finding: Finding): Promise<void>;
   resolveFinding(ref: ThreadRef): Promise<void>;
+  /**
+   * Optional: continue an existing finding thread with the remaining change to
+   * make (after a partial fix, or when a resolved finding comes back). Platforms
+   * without threads fall back to `updateFinding`.
+   */
+  replyToFinding?(ref: ThreadRef, finding: Finding): Promise<void>;
   /** Create or update the single summary comment; `findings` is the ledger's current state (for the table). */
   upsertSummary(summary: ReviewSummary, findings?: Finding[]): Promise<void>;
   /**

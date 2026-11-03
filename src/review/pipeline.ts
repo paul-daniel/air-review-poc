@@ -582,8 +582,14 @@ async function publishFindings(
       }
       if (!finding.threadRef) {
         finding.threadRef = await scm.createInlineFinding(finding);
-      } else if (finding.status === "REOPENED" && old?.status === "RESOLVED") {
-        await scm.updateFinding(finding.threadRef, finding);
+      } else if (
+        finding.changedSinceLastReview ||
+        (finding.status === "REOPENED" && old?.status === "RESOLVED")
+      ) {
+        // Continue the conversation where it started: a reply with what is still
+        // to be done, never a second thread and never a rewritten first comment.
+        if (scm.replyToFinding) await scm.replyToFinding(finding.threadRef, finding);
+        else await scm.updateFinding(finding.threadRef, finding);
       } else if (old && old.fingerprint !== finding.fingerprint) {
         await scm.updateFinding(finding.threadRef, finding);
       }

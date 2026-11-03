@@ -103,6 +103,12 @@ export interface Finding {
   lastCheckedSha?: string;
   /** SCM thread reference once the finding has been published. */
   threadRef?: ThreadRef;
+  /**
+   * True when this push changed the code around the finding but the finding
+   * still stands: the reviewer then continues in the existing thread with the
+   * remaining change to make, instead of editing the first comment.
+   */
+  changedSinceLastReview?: boolean;
 }
 
 export interface ThreadRef {
