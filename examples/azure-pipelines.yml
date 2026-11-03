@@ -31,7 +31,7 @@ pr:
     include: [main]
 
 pool:
-  vmImage: ubuntu-latest # or `name: Default` for a self-hosted agent
+  name: Default # self-hosted agent (this organisation has no hosted parallelism); use `vmImage: ubuntu-latest` when it does
 
 variables:
   - group: air-review
@@ -46,7 +46,15 @@ steps:
       versionSpec: "22.x"
     displayName: Use Node 22
 
-  - script: npm install -g github:paul-daniel/air-review-poc
+  # Installed in an isolated folder of the agent (a global install leaves state
+  # behind between runs on self-hosted agents); the folder is then put on PATH.
+  - script: |
+      set -e
+      dir="$(Agent.TempDirectory)/air-review"
+      rm -rf "$dir" && mkdir -p "$dir" && cd "$dir"
+      npm init -y >/dev/null
+      npm install github:paul-daniel/air-review-poc --no-audit --no-fund
+      echo "##vso[task.prependpath]$dir/node_modules/.bin"
     displayName: Install air-review
 
   # Optional, keyless Foundry access through a service connection (Microsoft Entra ID).
@@ -62,7 +70,9 @@ steps:
   #       token=$(az account get-access-token --scope https://ai.azure.com/.default --query accessToken -o tsv)
   #       echo "##vso[task.setvariable variable=AIR_REVIEW_ACCESS_TOKEN;issecret=true]$token"
 
-  - script: air-review review --publish --plain
+  - script: |
+      mkdir -p .air-review/reports
+      air-review review --publish --plain
     displayName: Air Review
     env:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken) # the job token: comments and votes as the build service
