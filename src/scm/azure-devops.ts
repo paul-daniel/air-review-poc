@@ -31,7 +31,12 @@ import type { GitRepository } from "../context/repository.js";
 import { parseUnifiedDiff } from "../context/diff.js";
 import { STATE_MARKER_OPEN } from "../state/ledger.js";
 import { SUMMARY_MARKER_OPEN, upsertSummaryBody } from "../state/summary.js";
-import { findingMarker, renderFindingComment, renderFollowUpComment } from "../state/finding-comment.js";
+import {
+  findingIdFromBody,
+  findingMarker,
+  renderFindingComment,
+  renderFollowUpComment,
+} from "../state/finding-comment.js";
 import {
   AzureDevOpsClient,
   AzureDevOpsHttpError,
@@ -284,6 +289,23 @@ export class AzureDevOpsAdapter implements ScmAdapter {
       commentType: "text",
     });
     this.invalidate();
+  }
+
+  /**
+   * Human decisions on finding threads. The adapter itself only ever sets
+   * `active` (open) and `fixed` (resolved) on a finding thread, so `wontFix`,
+   * `byDesign` and `closed` can only come from a person.
+   */
+  async listDismissedFindings(): Promise<Set<string>> {
+    const dismissed = new Set<string>();
+    for (const thread of await this.threads()) {
+      const comment = AzureDevOpsAdapter.firstComment(thread);
+      const id = comment?.content ? findingIdFromBody(comment.content) : null;
+      if (id && thread.status && ["wontfix", "bydesign", "closed"].includes(thread.status.toLowerCase())) {
+        dismissed.add(id);
+      }
+    }
+    return dismissed;
   }
 
   async listState(): Promise<string | null> {

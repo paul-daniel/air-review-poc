@@ -103,7 +103,13 @@ export function reconcile(
       },
       configHash,
     );
-    const status: Finding["status"] = previousMatch?.status === "RESOLVED" ? "REOPENED" : "OPEN";
+    // A finding a reviewer dismissed stays dismissed, however often it is reported.
+    const status: Finding["status"] =
+      previousMatch?.status === "WONT_FIX"
+        ? "WONT_FIX"
+        : previousMatch?.status === "RESOLVED"
+          ? "REOPENED"
+          : "OPEN";
     if (previousMatch?.status === "RESOLVED") {
       events.push({ event: "reopened", findingId: id, detail: "finding reappeared after fix" });
     }
@@ -111,6 +117,7 @@ export function reconcile(
     // the reviewer will continue in the thread rather than rewrite its comment.
     const touched =
       previousMatch !== undefined &&
+      status !== "WONT_FIX" &&
       previousMatch.status !== "RESOLVED" &&
       previousMatch.status !== "WONT_FIX" &&
       options.incremental &&

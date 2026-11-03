@@ -101,6 +101,27 @@ export async function runReview(options, deps) {
     // diff, so the review must be redone from the new base, but the previous
     // findings are kept so existing threads are updated or resolved rather than
     // duplicated (seen live on Azure DevOps when main moved during a PR).
+    // A person may have closed a finding's thread as "won't fix" or "by design":
+    // that decision stands, whatever the next review finds on those lines.
+    const dismissedEvents = [];
+    if (previous && scm.listDismissedFindings) {
+        try {
+            const dismissed = await scm.listDismissedFindings();
+            for (const finding of previous.findings) {
+                if (dismissed.has(finding.id) && finding.status !== "WONT_FIX") {
+                    finding.status = "WONT_FIX";
+                    dismissedEvents.push({
+                        event: "dismissed",
+                        findingId: finding.id,
+                        detail: "thread closed by a reviewer",
+                    });
+                }
+            }
+        }
+        catch (error) {
+            warnings.push(`Could not read thread statuses: ${error.message}`);
+        }
+    }
     const baseMoved = Boolean(previous) && previous?.pullRequest.baseSha !== snapshot.baseSha;
     if (baseMoved) {
         warnings.push(`Target branch moved from ${previous.pullRequest.baseSha.slice(0, 8)} to ${snapshot.baseSha.slice(0, 8)}: ` +
@@ -403,14 +424,14 @@ export async function runReview(options, deps) {
         runId,
         routing,
         findings,
-        events: reconciliation.events,
+        events: [...dismissedEvents, ...reconciliation.events],
         metrics,
     });
     if (!incomplete && config.memory.backend !== "none" && (scm.kind === "local" || published)) {
         await scm.writeState(encodeState(nextState));
     }
     finalizeMetrics(config, metrics, warnings, incomplete);
-    const summary = finishSummary(config, nextState, snapshot, warnings, metrics, trace, reconciliation.events, { incomplete });
+    const summary = finishSummary(config, nextState, snapshot, warnings, metrics, trace, [...dismissedEvents, ...reconciliation.events], { incomplete });
     if (scm.kind === "local" || (published && !stale)) {
         const voteStep = trace.begin("verdict", `Verdict: ${summary.verdict}`);
         await scm.upsertSummary(summary, findings);

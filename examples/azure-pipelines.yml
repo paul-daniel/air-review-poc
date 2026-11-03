@@ -70,9 +70,7 @@ steps:
   #       token=$(az account get-access-token --scope https://ai.azure.com/.default --query accessToken -o tsv)
   #       echo "##vso[task.setvariable variable=AIR_REVIEW_ACCESS_TOKEN;issecret=true]$token"
 
-  - script: |
-      mkdir -p .air-review/reports
-      air-review review --publish --plain
+  - script: air-review review --publish --plain
     displayName: Air Review
     env:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken) # the job token: comments and votes as the build service
@@ -81,6 +79,7 @@ steps:
   - publish: $(Build.SourcesDirectory)/.air-review/reports
     artifact: air-review-reports
     condition: succeededOrFailed()
+    continueOnError: true # no report when the review could not start; never fail the job for that
     displayName: Keep the run report (cost per step, workflow diagram)
 
   # ---- Your own quality steps go here (keep what your project really has). ----

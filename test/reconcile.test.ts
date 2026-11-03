@@ -290,3 +290,15 @@ describe("reconcile: partial fixes", () => {
     expect(result.events).toEqual([]);
   });
 });
+
+describe("reconcile: reviewer dismissals", () => {
+  it("keeps a WONT_FIX finding dismissed when the rule reports it again", () => {
+    const old = previous({ status: "WONT_FIX", threadRef: { platform: "azure-devops", id: "9:1" } });
+    const result = reconcile([old], [candidate()], delta(["a.ts"]), "sha256:cfg", "head", {
+      incremental: true,
+    });
+    expect(result.findings[0]).toMatchObject({ id: "arf_aaaaaa", status: "WONT_FIX" });
+    expect(result.events).toEqual([]);
+    expect(result.newOrReopened).toEqual([]);
+  });
+});

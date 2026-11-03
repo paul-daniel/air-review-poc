@@ -42,13 +42,19 @@ export function reconcile(previous, candidates, delta, configHash, headSha, opti
             severity: candidate.severity,
             scope: candidate.scope,
         }, configHash);
-        const status = previousMatch?.status === "RESOLVED" ? "REOPENED" : "OPEN";
+        // A finding a reviewer dismissed stays dismissed, however often it is reported.
+        const status = previousMatch?.status === "WONT_FIX"
+            ? "WONT_FIX"
+            : previousMatch?.status === "RESOLVED"
+                ? "REOPENED"
+                : "OPEN";
         if (previousMatch?.status === "RESOLVED") {
             events.push({ event: "reopened", findingId: id, detail: "finding reappeared after fix" });
         }
         // The author changed the lines around an open finding and it still stands:
         // the reviewer will continue in the thread rather than rewrite its comment.
         const touched = previousMatch !== undefined &&
+            status !== "WONT_FIX" &&
             previousMatch.status !== "RESOLVED" &&
             previousMatch.status !== "WONT_FIX" &&
             options.incremental &&

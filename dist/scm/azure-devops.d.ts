@@ -111,6 +111,12 @@ export declare class AzureDevOpsAdapter implements ScmAdapter {
      * https://learn.microsoft.com/en-us/rest/api/azure/devops/git/pull-request-thread-comments/create?view=azure-devops-rest-7.1
      */
     private replyTo;
+    /**
+     * Human decisions on finding threads. The adapter itself only ever sets
+     * `active` (open) and `fixed` (resolved) on a finding thread, so `wontFix`,
+     * `byDesign` and `closed` can only come from a person.
+     */
+    listDismissedFindings(): Promise<Set<string>>;
     listState(): Promise<string | null>;
     writeState(body: string): Promise<void>;
     /**

@@ -46,6 +46,12 @@ export interface ScmAdapter {
      * without threads fall back to `updateFinding`.
      */
     replyToFinding?(ref: ThreadRef, finding: Finding): Promise<void>;
+    /**
+     * Optional: ids of findings whose thread a human closed as "won't fix",
+     * "by design" or "closed". Such findings are dismissed: they never block
+     * and are never posted again.
+     */
+    listDismissedFindings?(): Promise<Set<string>>;
     /** Create or update the single summary comment; `findings` is the ledger's current state (for the table). */
     upsertSummary(summary: ReviewSummary, findings?: Finding[]): Promise<void>;
     /**

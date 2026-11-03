@@ -220,3 +220,18 @@ describe("continuing a finding thread", () => {
     expect(calls.filter((c) => c.method === "POST" && c.url.includes("/threads?"))).toHaveLength(0);
   });
 });
+
+describe("reviewer dismissals", () => {
+  it("reports findings whose thread a person closed as won't fix, by design or closed", async () => {
+    const threads = [
+      { id: 1, status: "wontFix", comments: [{ id: 1, content: `${findingMarker("arf_aaaaaa")}\nx` }] },
+      { id: 2, status: "byDesign", comments: [{ id: 1, content: `${findingMarker("arf_bbbbbb")}\nx` }] },
+      { id: 3, status: "fixed", comments: [{ id: 1, content: `${findingMarker("arf_cccccc")}\nx` }] },
+      { id: 4, status: "active", comments: [{ id: 1, content: `${findingMarker("arf_dddddd")}\nx` }] },
+      { id: 5, status: "closed", comments: [{ id: 1, content: "<!-- air-review:state:v1 -->" }] },
+    ];
+    const { scm } = adapter(threads);
+    await scm.getPullRequest();
+    expect([...(await scm.listDismissedFindings())].sort()).toEqual(["arf_aaaaaa", "arf_bbbbbb"]);
+  });
+});
