@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Collapsed memory thread.** The state thread's JSON ledger is now wrapped in a `<details>` block
+  (closed by default, one title line) with the JSON in a fenced code block, so the activity feed of
+  the pull request shows the review comments first. Ledgers written by 0.3.0 and earlier are still read.
+
 ## [0.3.0] - 2026-11-03 — Foundry SDKs, Claude, reviewer behaviour
 
 ### Added

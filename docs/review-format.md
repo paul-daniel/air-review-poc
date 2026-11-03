@@ -76,6 +76,10 @@ Choices and why:
   reviews and PR-Agent's persistent finding state do.
 - **Collapsed observability** (cost per step, workflow diagram) keeps the
   comment short while making every run auditable.
+- **Collapsed memory thread.** The machine-readable ledger (the state thread)
+  is wrapped in a `<details>` block that is closed by default and shows one
+  title line in the activity feed: humans scroll past it, the tool reads the
+  JSON between its markers whether the block is expanded or not.
 - **Hidden markers** (`<!-- air-review:summary:v1 -->`, `<!-- air-review:state:v1 -->`,
   `<!-- air-review:finding:<id> -->`) let the next run find and update its own
   comments; nothing is ever posted twice.

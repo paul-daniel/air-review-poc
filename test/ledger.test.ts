@@ -18,6 +18,29 @@ describe("PR ledger", () => {
     expect(extractState(`noise ${encoded} noise`)).toEqual(state);
   });
 
+  it("keeps the ledger collapsed by default and shown as code when expanded", () => {
+    const state = emptyState("org/repo", { number: 1, baseSha: "a", headSha: "b" }, "sha256:cfg", {
+      reviewer: "m",
+      planner: "m",
+      verifier: "m",
+    });
+    const encoded = encodeState(state);
+    expect(encoded.startsWith("<details><summary>")).toBe(true);
+    expect(encoded.endsWith("</details>")).toBe(true);
+    expect(encoded).not.toContain("<details open");
+    expect(encoded).toContain("<!-- air-review:state:v1 -->\n```json\n{");
+  });
+
+  it("still reads the bare envelope written by earlier versions", () => {
+    const state = emptyState("org/repo", { number: 1, baseSha: "a", headSha: "b" }, "sha256:cfg", {
+      reviewer: "m",
+      planner: "m",
+      verifier: "m",
+    });
+    const legacy = `<!-- air-review:state:v1 -->\n${JSON.stringify(state, null, 2)}\n<!-- /air-review:state:v1 -->`;
+    expect(extractState(legacy)).toEqual(state);
+  });
+
   it("returns null for unreadable or foreign-schema state", () => {
     expect(extractState("no marker")).toBeNull();
     expect(extractState("<!-- air-review:state:v1 --> {broken")).toBeNull();
