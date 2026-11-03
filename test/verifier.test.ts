@@ -177,10 +177,18 @@ describe("taste remarks never block", () => {
     const result = deterministicVerify(
       defaultConfig(),
       [
-        { ...base, severity: "MINOR", ruleOrigin: "HEURISTIC", category: "maintainability" },
-        { ...base, severity: "MAJOR", ruleOrigin: "HEURISTIC", category: "correctness", title: "Wrong unit" },
+        { ...base, ruleId: "r1", severity: "MINOR", ruleOrigin: "HEURISTIC", category: "maintainability" },
         {
           ...base,
+          ruleId: "r2",
+          severity: "MAJOR",
+          ruleOrigin: "HEURISTIC",
+          category: "correctness",
+          title: "Wrong unit",
+        },
+        {
+          ...base,
+          ruleId: "r3",
           severity: "MINOR",
           ruleOrigin: "REPO_CONVENTION",
           category: "consistency",

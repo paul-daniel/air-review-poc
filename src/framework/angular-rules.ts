@@ -55,7 +55,7 @@ async function subscriptionCleanupFindings(ctx: RuleContext): Promise<CandidateF
             : `Add cleanup to this subscription; a repository-wide refactor is not needed.`),
         suggestion: suggestedCode
           ? `Tie the subscription to the component lifecycle with \`${CLEANUP_OPERATOR}\`${repoHasConvention ? ", as the rest of this repository does" : ""}.`
-          : `Pipe the stream through \`${CLEANUP_OPERATOR}(this.destroyRef)\` before subscribing (inject \`DestroyRef\` from \`@angular/core\`).`,
+          : `Pipe the stream through \`${CLEANUP_OPERATOR}(this.destroyRef)\` before subscribing. Inject \`DestroyRef\` from \`@angular/core\`.`,
         suggestedCode,
         anchor: {
           file: file.path,
