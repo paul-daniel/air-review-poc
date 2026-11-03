@@ -25,17 +25,22 @@
 #   AIR_REVIEW_API_KEY  (secret)     Foundry API key — or use the AzureCLI step below for keyless Entra ID
 #   AIR_REVIEW_PUBLISH               optional; `false` = review and report, but post nothing to the PR
 #                                    (while the pipeline identity lacks "Contribute to pull requests")
-# The review steps run only in pull-request builds: a run started by hand on a
-# branch just builds and tests.
+# The review steps run in pull-request builds (branch policy), or in a manual
+# run given a pull request id (Run pipeline → Branch = the PR's source branch →
+# parameter "Pull request id"): for projects where you cannot add the policy.
+# A manual run without that id just builds and tests.
 # Claude deployments are recognised by their name (claude-…) or with the prefix claude:<deployment>.
 
-trigger: none # run from the branch policy, not on push
-pr:
-  branches:
-    include: [main]
+trigger: none # run from the branch policy (Azure Repos ignores a `pr:` trigger), not on push
+
+parameters:
+  - name: pullRequestId
+    displayName: Pull request id (manual run without a branch policy; 0 = none)
+    type: number
+    default: 0
 
 pool:
-  name: Default # self-hosted agent (this organisation has no hosted parallelism); use `vmImage: ubuntu-latest` when it does
+  vmImage: ubuntu-latest # Microsoft-hosted agents; without hosted parallelism use a self-hosted pool: `name: Default`
 
 variables:
   - group: air-review
@@ -60,7 +65,7 @@ steps:
       npm install github:paul-daniel/air-review-poc --no-audit --no-fund
       echo "##vso[task.prependpath]$dir/node_modules/.bin"
     displayName: Install air-review
-    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    condition: and(succeeded(), or(eq(variables['Build.Reason'], 'PullRequest'), ne(${{ parameters.pullRequestId }}, 0)))
 
   # Optional, keyless Foundry access through a service connection (Microsoft Entra ID).
   # With this step you can leave AIR_REVIEW_API_KEY empty. The identity needs the
@@ -75,16 +80,22 @@ steps:
   #       token=$(az account get-access-token --scope https://ai.azure.com/.default --query accessToken -o tsv)
   #       echo "##vso[task.setvariable variable=AIR_REVIEW_ACCESS_TOKEN;issecret=true]$token"
 
-  - script: air-review review --publish --plain
+  - script: |
+      if [ "${{ parameters.pullRequestId }}" != "0" ]; then
+        # Manual run: make sure the target branch is present locally for the diff.
+        git fetch --quiet origin "+refs/heads/*:refs/remotes/origin/*"
+        set -- --pr "${{ parameters.pullRequestId }}"
+      fi
+      air-review review --publish --plain "$@"
     displayName: Air Review
-    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    condition: and(succeeded(), or(eq(variables['Build.Reason'], 'PullRequest'), ne(${{ parameters.pullRequestId }}, 0)))
     env:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken) # the job token: comments and votes as the build service
       AIR_REVIEW_API_KEY: $(AIR_REVIEW_API_KEY) # secret variables are never exported to scripts by default
 
   - publish: $(Build.SourcesDirectory)/.air-review/reports
     artifact: air-review-reports
-    condition: and(succeededOrFailed(), eq(variables['Build.Reason'], 'PullRequest'))
+    condition: and(succeededOrFailed(), or(eq(variables['Build.Reason'], 'PullRequest'), ne(${{ parameters.pullRequestId }}, 0)))
     continueOnError: true # no report when the review could not start; never fail the job for that
     displayName: Keep the run report (cost per step, workflow diagram)
 
@@ -95,8 +106,10 @@ steps:
     displayName: Tests
 
   # Approval: only when the review, the build and the tests succeeded.
-  - script: air-review approve --plain
+  - script: |
+      if [ "${{ parameters.pullRequestId }}" != "0" ]; then set -- --pr "${{ parameters.pullRequestId }}"; fi
+      air-review approve --plain "$@"
     displayName: Approve the pull request
-    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    condition: and(succeeded(), or(eq(variables['Build.Reason'], 'PullRequest'), ne(${{ parameters.pullRequestId }}, 0)))
     env:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)

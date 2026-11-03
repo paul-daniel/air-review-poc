@@ -13,6 +13,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- **Manual review of a pull request.** The example pipeline takes a `pullRequestId` parameter: a manual run on
+  the PR's source branch with that id reviews it like a PR build (`--pr`), for projects where the branch policy
+  cannot be added. The `pr:` trigger (ignored by Azure Repos) is gone, so the YAML no longer depends on the name
+  of the target branch, and the default pool is the Microsoft-hosted one.
 - **CI build without a pull request.** `review` and `approve` now exit 0 with "nothing to review" when the
   pipeline was started by hand on a branch, instead of failing on a missing base ref. The example pipeline
   only runs the review steps in pull-request builds.
