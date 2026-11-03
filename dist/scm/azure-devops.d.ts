@@ -112,9 +112,11 @@ export declare class AzureDevOpsAdapter implements ScmAdapter {
      */
     private replyTo;
     /**
-     * Human decisions on finding threads. The adapter itself only ever sets
-     * `active` (open) and `fixed` (resolved) on a finding thread, so `wontFix`,
-     * `byDesign` and `closed` can only come from a person.
+     * Human decisions on finding threads: `wontFix`, `byDesign`, `closed`, and
+     * `fixed` ("Resolved" in the portal). The adapter sets `fixed` itself only
+     * when it resolved the finding, which the ledger records as RESOLVED; the
+     * pipeline therefore treats a `fixed` thread of a still-open finding as a
+     * reviewer's decision.
      */
     listDismissedFindings(): Promise<Set<string>>;
     listState(): Promise<string | null>;

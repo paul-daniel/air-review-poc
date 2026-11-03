@@ -207,16 +207,20 @@ export class AzureDevOpsAdapter {
         this.invalidate();
     }
     /**
-     * Human decisions on finding threads. The adapter itself only ever sets
-     * `active` (open) and `fixed` (resolved) on a finding thread, so `wontFix`,
-     * `byDesign` and `closed` can only come from a person.
+     * Human decisions on finding threads: `wontFix`, `byDesign`, `closed`, and
+     * `fixed` ("Resolved" in the portal). The adapter sets `fixed` itself only
+     * when it resolved the finding, which the ledger records as RESOLVED; the
+     * pipeline therefore treats a `fixed` thread of a still-open finding as a
+     * reviewer's decision.
      */
     async listDismissedFindings() {
         const dismissed = new Set();
         for (const thread of await this.threads()) {
             const comment = AzureDevOpsAdapter.firstComment(thread);
             const id = comment?.content ? findingIdFromBody(comment.content) : null;
-            if (id && thread.status && ["wontfix", "bydesign", "closed"].includes(thread.status.toLowerCase())) {
+            if (id &&
+                thread.status &&
+                ["wontfix", "bydesign", "closed", "fixed"].includes(thread.status.toLowerCase())) {
                 dismissed.add(id);
             }
         }
