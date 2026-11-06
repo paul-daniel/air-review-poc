@@ -2,6 +2,27 @@ import { describe, expect, it } from "vitest";
 import { extractFileFacts } from "../src/context/typescript-facts.js";
 
 describe("extractFileFacts", () => {
+  it("counts a subscription wrapped in effect() once, on the subscribe line", () => {
+    const facts = extractFileFacts(
+      "w.ts",
+      [
+        "import { Component, effect, inject } from '@angular/core';",
+        "@Component({ selector: 'x', template: '' })",
+        "export class PromoComponent {",
+        "  private readonly api = inject(Api);",
+        "  constructor() {",
+        "    effect(() => {",
+        "      const code = this.code();",
+        "      this.api.preview(code).subscribe({ next: (p) => this.preview.set(p) });",
+        "    });",
+        "    void this.api.ping().subscribe();",
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    expect(facts.subscriptions.map((s) => `${s.line}:${s.cleanup}`)).toEqual(["8:none", "10:none"]);
+  });
+
   it("extracts Angular component symbols, injections and subscriptions", () => {
     const facts = extractFileFacts(
       "src/app/order.component.ts",

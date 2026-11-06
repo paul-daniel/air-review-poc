@@ -35,6 +35,12 @@ All notable changes to this project are documented here. The format follows
   (closed by default, one title line) with the JSON in a fenced code block, so the activity feed of
   the pull request shows the review comments first. Ledgers written by 0.3.0 and earlier are still read.
 
+### Fixed
+
+- **One subscription, one finding.** A `.subscribe(` inside a wrapper statement such as `effect(() => { … })`
+  produced two `angular.subscription-lifecycle` findings (the wrapper and the call). Only the statement whose
+  own call ends in `.subscribe(` is counted now.
+
 ## [0.3.0] - 2026-11-03 — Foundry SDKs, Claude, reviewer behaviour
 
 ### Added

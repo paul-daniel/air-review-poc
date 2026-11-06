@@ -195,7 +195,9 @@ export function extractFileFacts(path: string, content: string): FileFacts {
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "inject") {
       usesInject = true;
     }
-    if (ts.isExpressionStatement(node) && /\.subscribe\s*\(/.test(node.getText(source))) {
+    // Only the statement whose own call ends in `.subscribe(`: a wrapper such as
+    // `effect(() => { …subscribe(…) })` must not be counted a second time.
+    if (ts.isExpressionStatement(node) && endsWithSubscribe(node.expression)) {
       const text = node.getText(source);
       const line = source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
       subscriptions.push({
@@ -221,4 +223,22 @@ export function extractFileFacts(path: string, content: string): FileFacts {
 
 export function isAngularFile(path: string): boolean {
   return /\.ts$/.test(path) && !/\.(spec|test)\.ts$/.test(path);
+}
+
+function endsWithSubscribe(expression: ts.Expression): boolean {
+  let current: ts.Expression = expression;
+  for (;;) {
+    if (ts.isVoidExpression(current) || ts.isAwaitExpression(current) || ts.isParenthesizedExpression(current)) {
+      current = current.expression;
+    } else if (ts.isBinaryExpression(current) && current.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      current = current.right; // `this.sub = this.s$.subscribe()`
+    } else {
+      break;
+    }
+  }
+  return (
+    ts.isCallExpression(current) &&
+    ts.isPropertyAccessExpression(current.expression) &&
+    current.expression.name.text === "subscribe"
+  );
 }
